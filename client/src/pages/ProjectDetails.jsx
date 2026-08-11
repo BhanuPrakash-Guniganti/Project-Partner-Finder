@@ -4,11 +4,11 @@ import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import MatchScoreBadge from '../components/matching/MatchScoreBadge';
 import ExplainableMatchModal from '../components/matching/ExplainableMatchModal';
-import { fetchProjectById, applyToProject } from '../services/api';
+import { fetchProjectById, applyToProject, fetchProjectApplications, respondApplication } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { 
   Briefcase, Users, Clock, Calendar, CheckCircle2, 
-  Send, UserCheck, ShieldAlert, ArrowLeft, Check 
+  Send, UserCheck, ShieldAlert, ArrowLeft, Check, X, User, MessageSquare
 } from 'lucide-react';
 
 const ProjectDetails = () => {
@@ -16,6 +16,7 @@ const ProjectDetails = () => {
   const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [team, setTeam] = useState(null);
+  const [incomingApplications, setIncomingApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState('');
@@ -26,7 +27,7 @@ const ProjectDetails = () => {
 
   useEffect(() => {
     loadProjectDetails();
-  }, [id]);
+  }, [id, user]);
 
   const loadProjectDetails = async () => {
     setLoading(true);
@@ -36,6 +37,16 @@ const ProjectDetails = () => {
       setTeam(res.data.team);
       if (res.data.requiredRoles && res.data.requiredRoles.length > 0) {
         setSelectedRole(res.data.requiredRoles[0].title);
+      }
+
+      const ownerId = res.data.ownerId?._id || res.data.ownerId;
+      if (user && ownerId === user._id) {
+        try {
+          const appsRes = await fetchProjectApplications(id);
+          setIncomingApplications(appsRes.data || []);
+        } catch (appErr) {
+          console.error('Failed to load project applications:', appErr);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -62,6 +73,15 @@ const ProjectDetails = () => {
     }
   };
 
+  const handleRespondApplication = async (appId, status) => {
+    try {
+      await respondApplication(appId, status);
+      await loadProjectDetails();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update application status.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center">
@@ -80,7 +100,8 @@ const ProjectDetails = () => {
     );
   }
 
-  const isOwner = user && project.ownerId && project.ownerId._id === user._id;
+  const ownerId = project.ownerId?._id || project.ownerId;
+  const isOwner = user && ownerId === user._id;
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between">
@@ -152,6 +173,97 @@ const ProjectDetails = () => {
             </div>
           </div>
         </div>
+
+        {/* INCOMING APPLICATIONS SECTION FOR PROJECT OWNER */}
+        {isOwner && (
+          <div className="glass-panel p-6 rounded-2xl border border-cyan-500/30 bg-cyan-950/10 space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                  <UserCheck className="w-5 h-5 text-cyan-400" />
+                  <span>Incoming Join Requests & Applications ({incomingApplications.length})</span>
+                </h3>
+                <p className="text-xs text-gray-400">Review candidates who applied to join your project team</p>
+              </div>
+            </div>
+
+            {incomingApplications.length === 0 ? (
+              <div className="p-6 text-center text-xs text-gray-400 border border-dashed border-gray-800 rounded-xl">
+                No active applications received yet for this project.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {incomingApplications.map(app => (
+                  <div key={app._id} className="bg-gray-900/90 p-4 rounded-xl border border-gray-800 space-y-3">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-cyan-800/30 text-cyan-300 font-bold flex items-center justify-center border border-cyan-500/30">
+                          {app.applicantId?.avatar ? (
+                            <img src={app.applicantId.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            app.applicantId?.name?.charAt(0) || 'A'
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-white text-sm">{app.applicantId?.name || 'Applicant'}</div>
+                          <div className="text-xs text-cyan-400">Requested Role: <span className="font-semibold">{app.requestedRole}</span></div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        {app.matchScore && <MatchScoreBadge score={app.matchScore} />}
+                        <span className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${
+                          app.status === 'Accepted' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                          app.status === 'Rejected' ? 'bg-red-500/20 text-red-300' :
+                          'bg-amber-500/20 text-amber-300'
+                        }`}>
+                          {app.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    {app.message && (
+                      <p className="text-xs text-gray-300 bg-gray-950 p-2.5 rounded-lg border border-gray-800 italic">
+                        "{app.message}"
+                      </p>
+                    )}
+
+                    {/* Applicant Skills */}
+                    {app.applicantId?.skills && app.applicantId.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {app.applicantId.skills.map((s, idx) => (
+                          <span key={idx} className="px-2 py-0.5 rounded text-[10px] bg-gray-800 text-cyan-300 font-medium">
+                            {s.name || s} ({s.proficiency || 'Intermediate'})
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    {app.status === 'Pending' && (
+                      <div className="pt-2 border-t border-gray-800 flex justify-end space-x-2">
+                        <button
+                          onClick={() => handleRespondApplication(app._id, 'Rejected')}
+                          className="px-3.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300 rounded-lg flex items-center space-x-1"
+                        >
+                          <X className="w-3.5 h-3.5 text-red-400" />
+                          <span>Decline</span>
+                        </button>
+                        <button
+                          onClick={() => handleRespondApplication(app._id, 'Accepted')}
+                          className="gradient-btn px-4 py-1.5 text-xs font-bold text-white rounded-lg flex items-center space-x-1 shadow-lg"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Accept & Add to Team</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Project Description & Roles Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -253,24 +365,23 @@ const ProjectDetails = () => {
               ) : (
                 <form onSubmit={handleApply} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-300">Select Requested Role</label>
+                    <label className="text-xs font-semibold text-gray-300">Select Role</label>
                     <select
                       value={selectedRole}
                       onChange={(e) => setSelectedRole(e.target.value)}
                       className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
                     >
-                      {project.requiredRoles?.map(r => (
-                        <option key={r.title} value={r.title}>{r.title}</option>
+                      {project.requiredRoles?.map((r, idx) => (
+                        <option key={idx} value={r.title}>{r.title}</option>
                       ))}
-                      <option value="Team Member">General Team Member</option>
                     </select>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-300">Application Pitch / Note</label>
+                    <label className="text-xs font-semibold text-gray-300">Note to Project Owner (Optional)</label>
                     <textarea
                       rows="3"
-                      placeholder="Why are you interested in this project? Share your relevant experience..."
+                      placeholder="Introduce yourself or highlight why you'd be a great fit for this role..."
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       className="w-full bg-gray-900 border border-gray-800 rounded-lg p-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
@@ -287,9 +398,10 @@ const ProjectDetails = () => {
                     </button>
                     <button
                       type="submit"
-                      className="gradient-btn px-5 py-2 text-xs font-bold text-white rounded-lg shadow-lg"
+                      className="gradient-btn px-5 py-2 text-xs font-bold text-white rounded-lg flex items-center space-x-1"
                     >
-                      Submit Application
+                      <Send className="w-4 h-4" />
+                      <span>Submit Application</span>
                     </button>
                   </div>
                 </form>

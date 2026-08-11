@@ -16,8 +16,9 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
+// Flexible CORS for local dev and production
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: true,
   credentials: true
 }));
 

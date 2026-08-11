@@ -8,22 +8,26 @@ import { fetchProjectById, applyToProject, fetchProjectApplications, respondAppl
 import { useAuth } from '../context/AuthContext';
 import { 
   Briefcase, Users, Clock, Calendar, CheckCircle2, 
-  Send, UserCheck, ShieldAlert, ArrowLeft, Check, X, User, MessageSquare
+  Send, UserCheck, ShieldAlert, ArrowLeft, Check, X, User, MessageSquare, ExternalLink, Loader2, AlertCircle
 } from 'lucide-react';
 
 const ProjectDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
+
   const [project, setProject] = useState(null);
   const [team, setTeam] = useState(null);
   const [incomingApplications, setIncomingApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appsError, setAppsError] = useState('');
+  const [loadingAppId, setLoadingAppId] = useState(null); // tracks which appId is being updated
+
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState('');
   const [message, setMessage] = useState('');
   const [appliedSuccess, setAppliedSuccess] = useState(false);
   const [applyError, setApplyError] = useState('');
-  const [explainModalOpen, setExplainModalOpen] = useState(false);
 
   useEffect(() => {
     loadProjectDetails();
@@ -41,11 +45,16 @@ const ProjectDetails = () => {
 
       const ownerId = res.data.ownerId?._id || res.data.ownerId;
       if (user && ownerId === user._id) {
+        setAppsLoading(true);
         try {
           const appsRes = await fetchProjectApplications(id);
           setIncomingApplications(appsRes.data || []);
+          setAppsError('');
         } catch (appErr) {
           console.error('Failed to load project applications:', appErr);
+          setAppsError('Could not load project applications. Please refresh to try again.');
+        } finally {
+          setAppsLoading(false);
         }
       }
     } catch (err) {
@@ -74,11 +83,23 @@ const ProjectDetails = () => {
   };
 
   const handleRespondApplication = async (appId, status) => {
+    setLoadingAppId(appId);
     try {
       await respondApplication(appId, status);
-      await loadProjectDetails();
+      
+      // Update local state immediately for instant UX update
+      setIncomingApplications(prev => prev.map(app => 
+        app._id === appId ? { ...app, status } : app
+      ));
+
+      // Reload project details to update team member list
+      const res = await fetchProjectById(id);
+      setProject(res.data);
+      setTeam(res.data.team);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update application status.');
+    } finally {
+      setLoadingAppId(null);
     }
   };
 
@@ -174,92 +195,167 @@ const ProjectDetails = () => {
           </div>
         </div>
 
-        {/* INCOMING APPLICATIONS SECTION FOR PROJECT OWNER */}
+        {/* INCOMING APPLICATIONS SECTION FOR PROJECT OWNER ONLY */}
         {isOwner && (
-          <div className="glass-panel p-6 rounded-2xl border border-cyan-500/30 bg-cyan-950/10 space-y-4">
+          <div id="applications-section" className="glass-panel p-6 rounded-2xl border border-cyan-500/30 bg-cyan-950/10 space-y-4">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center space-x-2">
                   <UserCheck className="w-5 h-5 text-cyan-400" />
-                  <span>Incoming Join Requests & Applications ({incomingApplications.length})</span>
+                  <span>Applications ({incomingApplications.length})</span>
                 </h3>
-                <p className="text-xs text-gray-400">Review candidates who applied to join your project team</p>
+                <p className="text-xs text-gray-400">Review candidate join requests for your project team</p>
               </div>
             </div>
 
-            {incomingApplications.length === 0 ? (
-              <div className="p-6 text-center text-xs text-gray-400 border border-dashed border-gray-800 rounded-xl">
-                No active applications received yet for this project.
+            {appsError && (
+              <div className="p-3 bg-red-950/40 border border-red-900/60 text-red-300 text-xs rounded-lg flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+                <span>{appsError}</span>
+              </div>
+            )}
+
+            {appsLoading ? (
+              <div className="p-8 text-center text-xs text-gray-400">
+                <Loader2 className="w-6 h-6 animate-spin text-cyan-400 mx-auto mb-2" />
+                <span>Loading applications...</span>
+              </div>
+            ) : incomingApplications.length === 0 ? (
+              <div className="p-8 text-center text-xs text-gray-400 border border-dashed border-gray-800 rounded-xl space-y-1">
+                <div className="font-bold text-gray-300">No applications yet</div>
+                <p className="text-gray-500">Applications from users who want to join your project will appear here.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {incomingApplications.map(app => (
-                  <div key={app._id} className="bg-gray-900/90 p-4 rounded-xl border border-gray-800 space-y-3">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-cyan-800/30 text-cyan-300 font-bold flex items-center justify-center border border-cyan-500/30">
-                          {app.applicantId?.avatar ? (
-                            <img src={app.applicantId.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
-                          ) : (
-                            app.applicantId?.name?.charAt(0) || 'A'
-                          )}
+              <div className="space-y-4">
+                {incomingApplications.map(app => {
+                  const applicant = app.applicantId || {};
+                  const isUpdating = loadingAppId === app._id;
+                  
+                  return (
+                    <div key={app._id} className="bg-gray-900/90 p-5 rounded-xl border border-gray-800 space-y-4 shadow-lg">
+                      
+                      {/* Applicant Header */}
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 rounded-full bg-cyan-800/30 text-cyan-300 font-bold flex items-center justify-center border border-cyan-500/30 text-base">
+                            {applicant.avatar ? (
+                              <img src={applicant.avatar} alt={applicant.name} className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                              applicant.name?.charAt(0) || 'A'
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-bold text-white text-sm">{applicant.name || 'Applicant'}</div>
+                            <div className="text-xs text-cyan-400 font-medium">
+                              Requested Role: <span className="font-semibold text-white">{app.requestedRole}</span>
+                            </div>
+                            {app.createdAt && (
+                              <div className="text-[10px] text-gray-500 flex items-center space-x-1 mt-0.5">
+                                <Clock className="w-3 h-3" />
+                                <span>{new Date(app.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-bold text-white text-sm">{app.applicantId?.name || 'Applicant'}</div>
-                          <div className="text-xs text-cyan-400">Requested Role: <span className="font-semibold">{app.requestedRole}</span></div>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center space-x-2">
-                        {app.matchScore && <MatchScoreBadge score={app.matchScore} />}
-                        <span className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${
-                          app.status === 'Accepted' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                          app.status === 'Rejected' ? 'bg-red-500/20 text-red-300' :
-                          'bg-amber-500/20 text-amber-300'
-                        }`}>
-                          {app.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    {app.message && (
-                      <p className="text-xs text-gray-300 bg-gray-950 p-2.5 rounded-lg border border-gray-800 italic">
-                        "{app.message}"
-                      </p>
-                    )}
-
-                    {/* Applicant Skills */}
-                    {app.applicantId?.skills && app.applicantId.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {app.applicantId.skills.map((s, idx) => (
-                          <span key={idx} className="px-2 py-0.5 rounded text-[10px] bg-gray-800 text-cyan-300 font-medium">
-                            {s.name || s} ({s.proficiency || 'Intermediate'})
+                        {/* Match Score & Status Badge */}
+                        <div className="flex items-center space-x-2">
+                          {app.matchScore && <MatchScoreBadge score={app.matchScore} />}
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1 ${
+                            app.status === 'Accepted' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                            app.status === 'Rejected' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                            'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                          }`}>
+                            {app.status === 'Accepted' && <Check className="w-3.5 h-3.5 mr-0.5" />}
+                            {app.status === 'Rejected' && <X className="w-3.5 h-3.5 mr-0.5" />}
+                            <span>{app.status}</span>
                           </span>
-                        ))}
+                        </div>
                       </div>
-                    )}
 
-                    {/* Action Buttons */}
-                    {app.status === 'Pending' && (
-                      <div className="pt-2 border-t border-gray-800 flex justify-end space-x-2">
-                        <button
-                          onClick={() => handleRespondApplication(app._id, 'Rejected')}
-                          className="px-3.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300 rounded-lg flex items-center space-x-1"
-                        >
-                          <X className="w-3.5 h-3.5 text-red-400" />
-                          <span>Decline</span>
-                        </button>
-                        <button
-                          onClick={() => handleRespondApplication(app._id, 'Accepted')}
-                          className="gradient-btn px-4 py-1.5 text-xs font-bold text-white rounded-lg flex items-center space-x-1 shadow-lg"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Accept & Add to Team</span>
-                        </button>
+                      {/* Cover Note / Short Message */}
+                      {app.message && (
+                        <p className="text-xs text-gray-300 bg-gray-950 p-3 rounded-lg border border-gray-800 italic">
+                          "{app.message}"
+                        </p>
+                      )}
+
+                      {/* Applicant Skills */}
+                      {applicant.skills && applicant.skills.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Applicant Skills:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {applicant.skills.map((s, idx) => {
+                              const skillName = typeof s === 'string' ? s : s.name;
+                              const skillProf = typeof s === 'string' ? 'Intermediate' : (s.proficiency || 'Beginner');
+                              return (
+                                <span key={idx} className="px-2.5 py-1 rounded text-[11px] bg-gray-800 text-cyan-300 font-medium border border-gray-700">
+                                  {skillName} ({skillProf})
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Bar (View Profile + Accept / Reject buttons) */}
+                      <div className="pt-3 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
+                        
+                        {/* View Profile Button */}
+                        {applicant._id ? (
+                          <Link
+                            to={`/candidates/${applicant._id}`}
+                            className="px-3.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-cyan-300 rounded-lg flex items-center justify-center space-x-1.5 transition-colors"
+                          >
+                            <User className="w-3.5 h-3.5" />
+                            <span>View Profile</span>
+                          </Link>
+                        ) : (
+                          <div></div>
+                        )}
+
+                        {/* Accept / Reject Decision Actions */}
+                        {app.status === 'Pending' ? (
+                          <div className="flex space-x-2">
+                            <button
+                              disabled={isUpdating}
+                              onClick={() => handleRespondApplication(app._id, 'Rejected')}
+                              className="flex-1 sm:flex-none px-4 py-1.5 bg-red-950/40 hover:bg-red-900/60 border border-red-900/60 text-xs font-semibold text-red-300 rounded-lg flex items-center justify-center space-x-1 transition-colors"
+                            >
+                              {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5 text-red-400" />}
+                              <span>{isUpdating ? 'Updating...' : 'Reject'}</span>
+                            </button>
+                            
+                            <button
+                              disabled={isUpdating}
+                              onClick={() => handleRespondApplication(app._id, 'Accepted')}
+                              className="flex-1 sm:flex-none gradient-btn px-5 py-1.5 text-xs font-bold text-white rounded-lg flex items-center justify-center space-x-1.5 shadow-lg transition-all"
+                            >
+                              {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-white" />}
+                              <span>{isUpdating ? 'Accepting...' : 'Accept'}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-xs font-semibold text-gray-400 flex items-center space-x-1">
+                            {app.status === 'Accepted' ? (
+                              <span className="text-emerald-400 font-bold flex items-center space-x-1">
+                                <Check className="w-4 h-4" />
+                                <span>✓ Accepted</span>
+                              </span>
+                            ) : (
+                              <span className="text-red-400 font-bold flex items-center space-x-1">
+                                <X className="w-4 h-4" />
+                                <span>✕ Rejected</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -54,11 +54,11 @@ const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 glass-panel border-b border-gray-800/80 bg-[#0b0f19]/95 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-3">
           
-          {/* Brand Logo - Fixed No Truncation */}
-          <Link to={user ? "/dashboard" : "/"} className="flex items-center space-x-2 group flex-shrink-0">
+          {/* Brand Logo - Fully Visible */}
+          <Link to={user ? "/dashboard" : "/"} className="flex items-center space-x-2.5 group flex-shrink-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform flex-shrink-0">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
@@ -72,8 +72,8 @@ const Navbar = () => {
             </div>
           </Link>
 
-          {/* Desktop Nav Links - Single Line Non-Wrapping */}
-          <div className="hidden lg:flex items-center space-x-1 xl:space-x-1.5 flex-shrink-0">
+          {/* Desktop Nav Links - Single Line Centered */}
+          <div className="hidden xl:flex items-center space-x-1.5 flex-shrink-0">
             {user && navLinks.map(link => {
               const Icon = link.icon;
               const isActive = location.pathname === link.path;
@@ -81,16 +81,16 @@ const Navbar = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs xl:text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs xl:text-sm font-medium whitespace-nowrap transition-all ${
                     isActive 
-                      ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' 
+                      ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold' 
                       : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="whitespace-nowrap">{link.name}</span>
                   {link.badge && (
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30 whitespace-nowrap">
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30 whitespace-nowrap">
                       {link.badge}
                     </span>
                   )}
@@ -99,9 +99,9 @@ const Navbar = () => {
             })}
           </div>
 
-          {/* Medium Desktop / Tablet Compact Nav (shown between md and lg) */}
-          <div className="hidden md:flex lg:hidden items-center space-x-1 flex-shrink-0">
-            {user && navLinks.slice(0, 4).map(link => {
+          {/* Medium Desktop Nav Links (1024px - 1280px) */}
+          <div className="hidden md:flex xl:hidden items-center space-x-1 flex-shrink-0">
+            {user && navLinks.map(link => {
               const Icon = link.icon;
               const isActive = location.pathname === link.path;
               return (
@@ -111,7 +111,7 @@ const Navbar = () => {
                   title={link.name}
                   className={`flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                     isActive 
-                      ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' 
+                      ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold' 
                       : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
                   }`}
                 >
@@ -122,27 +122,29 @@ const Navbar = () => {
             })}
           </div>
 
-          {/* Desktop Right Actions */}
-          <div className="hidden md:flex items-center space-x-2 xl:space-x-3 flex-shrink-0">
+          {/* Desktop Right Action Bar */}
+          <div className="hidden md:flex items-center space-x-2.5 flex-shrink-0">
             {user ? (
               <>
+                {/* Create Project Action Button */}
                 <Link
                   to="/projects/new"
-                  className="gradient-btn flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs lg:text-sm font-semibold text-white shadow-lg whitespace-nowrap flex-shrink-0"
+                  className="gradient-btn flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shadow-lg whitespace-nowrap flex-shrink-0"
                 >
                   <PlusCircle className="w-4 h-4 flex-shrink-0" />
                   <span className="whitespace-nowrap">Create Project</span>
                 </Link>
 
-                {/* Notifications Bell (Desktop) */}
+                {/* Notifications Bell */}
                 <div className="relative flex-shrink-0">
                   <button
                     onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
-                    className="p-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 relative transition-colors"
+                    className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 relative transition-colors"
+                    title="Notifications"
                   >
-                    <Bell className="w-4 h-4 lg:w-5 lg:h-5" />
+                    <Bell className="w-4.5 h-4.5" />
                     {unreadCount > 0 && (
-                      <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-cyan-500 text-[10px] font-bold text-black rounded-full flex items-center justify-center animate-pulse">
+                      <span className="absolute top-1 right-1 w-4 h-4 bg-cyan-500 text-[10px] font-bold text-black rounded-full flex items-center justify-center animate-pulse">
                         {unreadCount}
                       </span>
                     )}
@@ -185,22 +187,25 @@ const Navbar = () => {
                   )}
                 </div>
 
-                {/* User Profile Menu */}
-                <div className="flex items-center space-x-1.5 border-l border-gray-800 pl-2 flex-shrink-0">
-                  <Link to="/profile" className="flex items-center space-x-1.5 text-xs lg:text-sm text-gray-200 hover:text-cyan-400 transition-colors whitespace-nowrap">
-                    <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                {/* Profile Circle Avatar Only (No user name text) */}
+                <div className="flex items-center space-x-1.5 border-l border-gray-800 pl-2.5 flex-shrink-0">
+                  <Link 
+                    to="/profile" 
+                    title={user.name ? `My Profile (${user.name})` : 'My Profile'}
+                    className="flex items-center justify-center transition-transform hover:scale-105 flex-shrink-0"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/50 text-white flex items-center justify-center font-bold text-xs shadow-md">
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
                       ) : (
-                        user.name?.charAt(0) || 'U'
+                        user.name?.charAt(0)?.toUpperCase() || 'U'
                       )}
                     </div>
-                    <span className="font-semibold whitespace-nowrap max-w-[100px] truncate">{user.name}</span>
                   </Link>
 
                   {user.role === 'admin' && (
                     <Link to="/admin" className="p-1.5 rounded-lg text-purple-400 hover:bg-purple-900/20 flex-shrink-0" title="Admin Dashboard">
-                      <ShieldAlert className="w-4 h-4" />
+                      <ShieldAlert className="w-4.5 h-4.5" />
                     </Link>
                   )}
 
@@ -209,7 +214,7 @@ const Navbar = () => {
                     className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-950/30 transition-colors flex-shrink-0"
                     title="Sign Out"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="w-4.5 h-4.5" />
                   </button>
                 </div>
               </>
@@ -225,7 +230,7 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Right Section (Notifications Bell + Hamburger Menu Toggle) */}
+          {/* Mobile Right Section */}
           <div className="flex md:hidden items-center space-x-1.5 flex-shrink-0">
             {user && (
               <div className="relative">
@@ -299,7 +304,7 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Sleek Mobile Menu Drawer */}
+      {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden glass-panel border-b border-gray-800 px-4 pt-3 pb-6 space-y-4 bg-[#0b0f19]/98 animate-fadeIn">
           {user ? (

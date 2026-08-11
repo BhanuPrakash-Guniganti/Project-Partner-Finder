@@ -1,0 +1,14 @@
+{
+  "name": "project-partner-finder-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Project Partner Finder root workspace",
+  "scripts": {
+    "dev": "npx concurrently -k -n \"server,client\" -c \"cyan,magenta\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "start": "npm run dev",
+    "seed": "npm run seed --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

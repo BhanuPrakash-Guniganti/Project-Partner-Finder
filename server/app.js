@@ -16,32 +16,47 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// Flexible CORS for local dev and production
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
+// Bulletproof CORS Middleware for Vercel, Render & Local Dev
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Healthcheck Route
-app.get('/api/health', (req, res) => {
+// Healthcheck Routes
+app.get(['/health', '/api/health'], (req, res) => {
   res.json({ status: 'ok', name: 'Project Partner Finder API', timestamp: new Date().toISOString() });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/matches', matchRoutes);
-app.use('/api/applications', applicationRoutes);
-app.use('/api/teams', teamRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/resume', resumeRoutes);
-app.use('/api/admin', adminRoutes);
+// Mount Routes with BOTH /api/ prefix and root path to handle both frontend configurations
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/users', '/users'], userRoutes);
+app.use(['/api/projects', '/projects'], projectRoutes);
+app.use(['/api/matches', '/matches'], matchRoutes);
+app.use(['/api/applications', '/applications'], applicationRoutes);
+app.use(['/api/teams', '/teams'], teamRoutes);
+app.use(['/api/tasks', '/tasks'], taskRoutes);
+app.use(['/api/chat', '/chat'], chatRoutes);
+app.use(['/api/notifications', '/notifications'], notificationRoutes);
+app.use(['/api/resume', '/resume'], resumeRoutes);
+app.use(['/api/admin', '/admin'], adminRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

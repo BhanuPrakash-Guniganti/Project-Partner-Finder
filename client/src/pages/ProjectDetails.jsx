@@ -6,6 +6,7 @@ import MatchScoreBadge from '../components/matching/MatchScoreBadge';
 import ExplainableMatchModal from '../components/matching/ExplainableMatchModal';
 import { fetchProjectById, applyToProject, fetchProjectApplications, respondApplication, deleteProject, updateProject } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { 
   Briefcase, Users, Clock, Calendar, CheckCircle2, 
   Send, UserCheck, ShieldAlert, ArrowLeft, Check, X, User, MessageSquare, ExternalLink, Loader2, AlertCircle,
@@ -15,6 +16,7 @@ import {
 const ProjectDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const { socket } = useSocket();
   const navigate = useNavigate();
 
   const [project, setProject] = useState(null);
@@ -51,6 +53,25 @@ const ProjectDetails = () => {
   useEffect(() => {
     loadProjectDetails();
   }, [id, user]);
+
+  useEffect(() => {
+    if (socket) {
+      const handleNewApp = (newApp) => {
+        const appProjId = typeof newApp.projectId === 'object' ? newApp.projectId?._id : newApp.projectId;
+        if (appProjId === id) {
+          setIncomingApplications(prev => {
+            if (newApp._id && prev.some(a => a._id === newApp._id)) {
+              return prev;
+            }
+            return [newApp, ...prev];
+          });
+        }
+      };
+
+      socket.on('new_application', handleNewApp);
+      return () => socket.off('new_application', handleNewApp);
+    }
+  }, [socket, id]);
 
   const loadProjectDetails = async () => {
     setLoading(true);

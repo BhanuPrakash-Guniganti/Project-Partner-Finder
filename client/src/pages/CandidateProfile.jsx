@@ -4,7 +4,7 @@ import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import MatchScoreBadge from '../components/matching/MatchScoreBadge';
 import { fetchUserById } from '../services/api';
-import { User, Github, Linkedin, ExternalLink, ArrowLeft, Mail, Clock } from 'lucide-react';
+import { User, Github, Linkedin, ExternalLink, ArrowLeft, Mail, Clock, MessageSquare } from 'lucide-react';
 
 const CandidateProfile = () => {
   const { id } = useParams();
@@ -76,6 +76,15 @@ const CandidateProfile = () => {
                 </p>
               </div>
             </div>
+
+            <Link
+              to="/chat"
+              state={{ recipient: candidate }}
+              className="gradient-btn px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md flex items-center space-x-1.5"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Message Candidate</span>
+            </Link>
           </div>
 
           {/* Bio */}

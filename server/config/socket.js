@@ -143,12 +143,30 @@ const sendNotificationToUser = (userId, notificationData) => {
   }
 };
 
+const sendApplicationToUser = (userId, applicationData) => {
+  if (!io) return;
+  const cleanUserId = normalizeId(userId);
+  if (cleanUserId) {
+    io.to(`user_${cleanUserId}`).emit('new_application', applicationData);
+  }
+};
+
+const emitApplicationStatusUpdate = (applicantId, statusUpdateData) => {
+  if (!io) return;
+  const cleanApplicantId = normalizeId(applicantId);
+  if (cleanApplicantId) {
+    io.to(`user_${cleanApplicantId}`).emit('application_status_updated', statusUpdateData);
+  }
+};
+
 module.exports = {
   initSocket,
   getIO,
   emitDirectMessage,
   emitGroupMessage,
   sendNotificationToUser,
+  sendApplicationToUser,
+  emitApplicationStatusUpdate,
   getOnlineUserIds,
   normalizeId
 };

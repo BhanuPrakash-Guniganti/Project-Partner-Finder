@@ -4,9 +4,11 @@ import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import MatchScoreBadge from '../components/matching/MatchScoreBadge';
 import { fetchUserApplications, fetchMyProjects, fetchProjectApplications, respondApplication } from '../services/api';
+import { useSocket } from '../context/SocketContext';
 import { Send, Check, X, ArrowRight, UserCheck, Inbox, User } from 'lucide-react';
 
 const Applications = () => {
+  const { socket } = useSocket();
   const [userApplications, setUserApplications] = useState([]);
   const [incomingApplications, setIncomingApplications] = useState([]);
   const [activeTab, setActiveTab] = useState('incoming'); // 'incoming' | 'sent'
@@ -15,6 +17,41 @@ const Applications = () => {
   useEffect(() => {
     loadAllApplications();
   }, []);
+
+  useEffect(() => {
+    if (socket) {
+      const handleNewApplication = (newApp) => {
+        setIncomingApplications(prev => {
+          if (newApp._id && prev.some(a => a._id === newApp._id)) {
+            return prev;
+          }
+          const appWithTitle = {
+            ...newApp,
+            projectTitle: newApp.projectId?.title || newApp.projectTitle || 'Project'
+          };
+          return [appWithTitle, ...prev];
+        });
+      };
+
+      const handleStatusUpdate = (data) => {
+        const { applicationId, status } = data;
+        setUserApplications(prev => prev.map(app => 
+          app._id === applicationId ? { ...app, status } : app
+        ));
+        setIncomingApplications(prev => prev.map(app => 
+          app._id === applicationId ? { ...app, status } : app
+        ));
+      };
+
+      socket.on('new_application', handleNewApplication);
+      socket.on('application_status_updated', handleStatusUpdate);
+
+      return () => {
+        socket.off('new_application', handleNewApplication);
+        socket.off('application_status_updated', handleStatusUpdate);
+      };
+    }
+  }, [socket]);
 
   const loadAllApplications = async () => {
     setLoading(true);

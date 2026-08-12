@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import { fetchUserTeams, fetchDirectMessages, sendMessageApi } from '../services/api';
@@ -9,6 +10,9 @@ import { MessageSquare, Send, Users, User } from 'lucide-react';
 const ChatPage = () => {
   const { user } = useAuth();
   const { socket, onlineUsers } = useSocket();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
   const [teams, setTeams] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -17,13 +21,14 @@ const ChatPage = () => {
 
   useEffect(() => {
     loadTeams();
-  }, []);
+  }, [location.key, location.state]);
 
   const loadTeams = async () => {
     setLoading(true);
     try {
       const res = await fetchUserTeams();
       setTeams(res.data || []);
+      
       // Collect members from all teams for 1-on-1 direct messaging
       const allMembers = [];
       (res.data || []).forEach(t => {
@@ -35,8 +40,24 @@ const ChatPage = () => {
           }
         });
       });
-      if (allMembers.length > 0) {
-        selectUserForChat(allMembers[0]);
+
+      // Explicit recipient resolution from state or search query
+      const stateRecipient = location.state?.recipient;
+      const targetUserId = location.state?.recipientId || searchParams.get('userId');
+
+      if (location.state?.resetChat) {
+        setSelectedUser(null);
+        setMessages([]);
+      } else if (stateRecipient && stateRecipient._id !== user._id) {
+        selectUserForChat(stateRecipient);
+      } else if (targetUserId) {
+        const found = allMembers.find(m => m._id === targetUserId);
+        if (found) {
+          selectUserForChat(found);
+        }
+      } else {
+        setSelectedUser(null);
+        setMessages([]);
       }
     } catch (err) {
       console.error(err);
@@ -208,8 +229,14 @@ const ChatPage = () => {
                 </form>
               </>
             ) : (
-              <div className="flex items-center justify-center h-full text-xs text-gray-500">
-                Select a teammate from the contact list to start messaging.
+              <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-3 bg-gray-950/20 rounded-xl border border-gray-800/60">
+                <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-lg">
+                  <MessageSquare className="w-7 h-7" />
+                </div>
+                <h3 className="text-sm font-bold text-white">Direct Messaging Hub</h3>
+                <p className="text-xs text-gray-400 max-w-sm leading-relaxed">
+                  Select a teammate from your contact list on the left to view or start a 1-on-1 conversation.
+                </p>
               </div>
             )}
           </div>

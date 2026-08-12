@@ -2,43 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-primary: #0b0f19;
+  --bg-secondary: #111827;
+  --bg-surface: #1f2937;
+  --bg-card: rgba(17, 24, 39, 0.7);
+  --bg-hover: rgba(31, 41, 55, 0.6);
+
+  --text-primary: #f9fafb;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  --border-primary: rgba(255, 255, 255, 0.1);
+  --border-secondary: rgba(255, 255, 255, 0.05);
+
+  --accent-primary: #06b6d4;
+  --accent-secondary: #6366f1;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  --input-bg: #111827;
+  --input-border: #374151;
+}
+
+html.light {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-hover: #f1f5f9;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
+
+  --accent-primary: #0284c7;
+  --accent-secondary: #4f46e5;
+
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+}
+
 @layer base {
   body {
-    background-color: #0b0f19;
-    color: #f3f4f6;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     transition: background-color 0.3s ease, color 0.3s ease;
-  }
-
-  html.light body {
-    background-color: #f8fafc;
-    color: #0f172a;
   }
 }
 
 /* Custom Glassmorphism & Aesthetics */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.7);
+  background: var(--bg-card);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-primary);
 }
 
 html.light .glass-panel {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
 }
 
 .glass-card {
-  background: rgba(17, 24, 39, 0.6);
+  background: var(--bg-card);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border-primary);
   transition: all 0.25s ease-in-out;
 }
 
 html.light .glass-card {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
 }
 
@@ -49,11 +94,11 @@ html.light .glass-card {
 }
 
 html.light .glass-card:hover {
-  border-color: rgba(14, 165, 233, 0.4);
-  box-shadow: 0 12px 30px -8px rgba(14, 165, 233, 0.12);
+  border-color: rgba(2, 132, 199, 0.4);
+  box-shadow: 0 12px 30px -8px rgba(2, 132, 199, 0.12);
 }
 
-/* Light Theme Color Overrides */
+/* Comprehensive Light Theme Color Overrides */
 html.light .bg-\[\#0b0f19\] {
   background-color: #f8fafc !important;
 }
@@ -64,6 +109,8 @@ html.light .bg-gray-900 {
 }
 
 html.light .bg-gray-950\/40,
+html.light .bg-gray-950\/60,
+html.light .bg-gray-950\/80,
 html.light .bg-gray-900\/80,
 html.light .bg-gray-900\/90,
 html.light .bg-gray-900\/50,
@@ -100,6 +147,54 @@ html.light textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: #cbd5e1 !important;
+}
+
+html.light .bg-black\/80,
+html.light .bg-black\/70,
+html.light .bg-black\/60 {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+}
+
+html.light .bg-gray-800 {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.light .hover\:bg-gray-800:hover,
+html.light .hover\:bg-gray-800\/60:hover,
+html.light .hover\:bg-gray-800\/50:hover,
+html.light .hover\:bg-gray-900:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html.light .text-cyan-300,
+html.light .text-cyan-400 {
+  color: #0284c7 !important;
+}
+
+html.light .bg-cyan-500\/10,
+html.light .bg-cyan-500\/15,
+html.light .bg-cyan-500\/20,
+html.light .bg-cyan-950\/40 {
+  background-color: #e0f2fe !important;
+}
+
+html.light .border-cyan-500\/30,
+html.light .border-cyan-500\/40,
+html.light .border-cyan-800 {
+  border-color: #7dd3fc !important;
+}
+
+html.light .bg-indigo-500\/20 {
+  background-color: #e0e7ff !important;
+}
+
+html.light .text-indigo-300 {
+  color: #4338ca !important;
+}
+
+html.light .border-indigo-500\/30 {
+  border-color: #a5b4fc !important;
 }
 
 /* Custom Gradients */
@@ -140,4 +235,3 @@ html.light ::-webkit-scrollbar-thumb {
 ::-webkit-scrollbar-thumb:hover {
   background: #374151;
 }
-

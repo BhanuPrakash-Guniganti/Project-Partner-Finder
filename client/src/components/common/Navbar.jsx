@@ -85,6 +85,7 @@ const Navbar = () => {
                 <Link
                   key={link.path}
                   to={link.path}
+                  state={link.path === '/chat' ? { resetChat: true } : undefined}
                   className={`flex items-center space-x-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-xs xl:text-sm font-medium whitespace-nowrap transition-all ${
                     isActive 
                       ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold' 
@@ -105,13 +106,14 @@ const Navbar = () => {
 
           {/* Tablet Nav Links (Medium Screens 768px - 1024px) */}
           <div className="hidden md:flex lg:hidden items-center space-x-1 flex-shrink-0">
-            {user && navLinks.slice(0, 5).map(link => {
+            {user && navLinks.map(link => {
               const Icon = link.icon;
               const isActive = location.pathname === link.path;
               return (
                 <Link
                   key={link.path}
                   to={link.path}
+                  state={link.path === '/chat' ? { resetChat: true } : undefined}
                   title={link.name}
                   className={`flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                     isActive 
@@ -120,7 +122,6 @@ const Navbar = () => {
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="whitespace-nowrap">{link.name}</span>
                 </Link>
               );
             })}
@@ -401,6 +402,7 @@ const Navbar = () => {
                     <Link
                       key={link.path}
                       to={link.path}
+                      state={link.path === '/chat' ? { resetChat: true } : undefined}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                         isActive 

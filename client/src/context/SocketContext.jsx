@@ -58,7 +58,12 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('new_notification', (notif) => {
-        setNotifications(prev => [notif, ...prev]);
+        setNotifications(prev => {
+          if (notif._id && prev.some(n => n._id === notif._id)) {
+            return prev;
+          }
+          return [notif, ...prev];
+        });
       });
 
       setSocket(newSocket);

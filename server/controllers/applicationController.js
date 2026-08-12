@@ -4,7 +4,7 @@ const User = require('../models/User');
 const Team = require('../models/Team');
 const Notification = require('../models/Notification');
 const { calculateMatchScore } = require('../services/matchingService');
-const { sendNotificationToUser } = require('../config/socket');
+const { sendNotificationToUser, sendApplicationToUser, emitApplicationStatusUpdate } = require('../config/socket');
 
 const applyToProject = async (req, res, next) => {
   try {
@@ -51,6 +51,13 @@ const applyToProject = async (req, res, next) => {
       status: 'Pending'
     });
 
+    const populatedApplication = await Application.findById(application._id)
+      .populate('applicantId', 'name avatar email bio skills experienceLevel availability preferredRoles')
+      .populate({
+        path: 'projectId',
+        select: 'title category type ownerId teamSize'
+      });
+
     // Send notification to project owner
     const notification = await Notification.create({
       userId: project.ownerId,
@@ -61,8 +68,9 @@ const applyToProject = async (req, res, next) => {
     });
 
     sendNotificationToUser(project.ownerId, notification);
+    sendApplicationToUser(project.ownerId, populatedApplication || application);
 
-    res.status(201).json(application);
+    res.status(201).json(populatedApplication || application);
   } catch (error) {
     next(error);
   }
@@ -216,13 +224,21 @@ const respondApplication = async (req, res, next) => {
       const notification = await Notification.create({
         userId: application.applicantId,
         title: 'Application Update',
-        message: `Your application to join "${application.projectId.title}" was not selected.`,
+        message: `Your application to join "${application.projectId?.title || 'the project'}" was not selected.`,
         type: 'rejection',
         link: `/projects`
       });
 
       sendNotificationToUser(application.applicantId, notification);
     }
+
+    // Emit real-time status update to applicant's room ONLY after DB persistence
+    emitApplicationStatusUpdate(application.applicantId, {
+      applicationId: application._id,
+      projectId: application.projectId?._id || application.projectId,
+      status: application.status,
+      projectTitle: application.projectId?.title
+    });
 
     res.json(application);
   } catch (error) {

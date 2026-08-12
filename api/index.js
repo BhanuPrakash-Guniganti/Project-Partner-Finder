@@ -6,6 +6,9 @@ module.exports = async (req, res) => {
     await connectDB();
   } catch (err) {
     console.error('[Vercel Serverless DB Error]', err);
+    return res.status(500).json({
+      message: 'Database connection failure. Persistent MongoDB database is unreachable.'
+    });
   }
   return app(req, res);
 };

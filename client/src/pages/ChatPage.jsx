@@ -55,39 +55,61 @@ const ChatPage = () => {
     }
   };
 
+  // Helper to safely append a message without creating duplicate entries
+  const appendMessageDeduplicated = (newMsg) => {
+    setMessages(prev => {
+      if (newMsg._id && prev.some(m => m._id === newMsg._id)) {
+        return prev;
+      }
+      return [...prev, newMsg];
+    });
+  };
+
   useEffect(() => {
     if (socket) {
       const handleDirectMsg = (data) => {
-        if (selectedUser && (data.senderId === selectedUser._id || data.senderId?._id === selectedUser._id)) {
-          setMessages(prev => [...prev, data]);
+        const senderIdStr = typeof data.senderId === 'object' ? data.senderId?._id : data.senderId;
+        const recipientIdStr = typeof data.recipientId === 'object' ? data.recipientId?._id : data.recipientId;
+
+        // Check if message belongs to current active conversation
+        const isCurrentConversation = selectedUser && (
+          senderIdStr === selectedUser._id || 
+          (senderIdStr === user?._id && recipientIdStr === selectedUser._id)
+        );
+
+        if (isCurrentConversation) {
+          appendMessageDeduplicated(data);
         }
       };
 
       socket.on('receive_direct_message', handleDirectMsg);
       return () => socket.off('receive_direct_message', handleDirectMsg);
     }
-  }, [socket, selectedUser]);
+  }, [socket, selectedUser, user]);
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedUser) return;
 
+    const messageText = newMessage;
+    setNewMessage('');
+
     try {
       const res = await sendMessageApi({
         recipientId: selectedUser._id,
-        content: newMessage
+        content: messageText
       });
 
-      setMessages([...messages, res.data]);
+      appendMessageDeduplicated(res.data);
+      
       if (socket) {
         socket.emit('send_direct_message', {
           ...res.data,
           recipientId: selectedUser._id
         });
       }
-      setNewMessage('');
     } catch (err) {
-      console.error(err);
+      console.error('[Chat Send Error]', err);
     }
   };
 

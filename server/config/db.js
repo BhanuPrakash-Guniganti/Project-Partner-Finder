@@ -7,87 +7,81 @@ const connectDB = async () => {
     return cachedConn;
   }
 
-  const primaryUri = process.env.MONGODB_URI || 'mongodb+srv://admin:MlcHsl2ysnCFW921@cluster0.whnfepe.mongodb.net/project_partner_finder?retryWrites=true&w=majority';
-  const localUri = 'mongodb://127.0.0.1:27017/project_partner_finder';
+  const isProduction = process.env.NODE_ENV === 'production';
+  const primaryUri = process.env.MONGODB_URI;
 
-  // 1. Try Primary URI (MongoDB Atlas Cloud DB)
-  if (primaryUri) {
+  // In production, strictly require process.env.MONGODB_URI and fail fast if Atlas is unreachable
+  if (isProduction) {
+    if (!primaryUri) {
+      const errMessage = '[MongoDB Error] MONGODB_URI environment variable is missing in production.';
+      console.error(errMessage);
+      throw new Error(errMessage);
+    }
+
     try {
-      console.log(`[MongoDB] Connecting to MongoDB Atlas Cloud Database...`);
+      console.log(`[MongoDB] Connecting to MongoDB Atlas Cloud Database in production...`);
       const conn = await mongoose.connect(primaryUri, {
-        serverSelectionTimeoutMS: 5000
+        serverSelectionTimeoutMS: 15000,
+        dbName: 'project_partner_finder'
       });
-      console.log(`[MongoDB] Connected successfully: ${conn.connection.host}`);
+      console.log(`[MongoDB] Connected successfully to Atlas: ${conn.connection.host}`);
       cachedConn = conn;
       return conn;
     } catch (err) {
-      console.warn(`[MongoDB Primary Connection Notice] ${err.message}`);
+      console.error(`[MongoDB Error] Connection to MongoDB Atlas failed: ${err.message}`);
+      console.error(`[MongoDB Error] Production requires a persistent MongoDB Atlas connection.`);
+      console.error(`[MongoDB Error] Application cannot continue without persistent database connectivity.`);
+      throw err;
+    }
+  }
+
+  // Development / Local Environment
+  const localUri = 'mongodb://127.0.0.1:27017/project_partner_finder';
+
+  // 1. Try process.env.MONGODB_URI in development if configured
+  if (primaryUri) {
+    try {
+      console.log(`[MongoDB Dev] Connecting to configured MONGODB_URI...`);
+      const conn = await mongoose.connect(primaryUri, {
+        serverSelectionTimeoutMS: 15000,
+        dbName: 'project_partner_finder'
+      });
+      console.log(`[MongoDB Dev] Connected successfully: ${conn.connection.host}`);
+      cachedConn = conn;
+      return conn;
+    } catch (err) {
+      console.warn(`[MongoDB Dev] Primary connection notice: ${err.message}`);
     }
   }
 
   // 2. Try Local MongoDB Instance
   try {
-    console.log(`[MongoDB] Connecting to local MongoDB (${localUri})...`);
+    console.log(`[MongoDB Dev] Connecting to local MongoDB (${localUri})...`);
     const conn = await mongoose.connect(localUri, {
       serverSelectionTimeoutMS: 3000
     });
-    console.log(`[MongoDB] Connected successfully to local database: ${conn.connection.host}`);
+    console.log(`[MongoDB Dev] Connected successfully to local database: ${conn.connection.host}`);
     cachedConn = conn;
     return conn;
   } catch (err) {
-    console.warn(`[MongoDB Local Connection Notice] ${err.message}`);
+    console.warn(`[MongoDB Dev] Local connection notice: ${err.message}`);
   }
 
-  // 3. Fail-safe: Try MongoMemoryServer for in-memory database
+  // 3. Fail-safe for local dev/testing only
   try {
-    console.log(`[MongoDB] Initializing MongoMemoryServer in-memory database...`);
+    console.log(`[MongoDB Dev] Initializing MongoMemoryServer for local development...`);
     const { MongoMemoryServer } = require('mongodb-memory-server');
     const mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     
     const conn = await mongoose.connect(mongoUri);
-    console.log(`[MongoDB Memory Server] In-memory database running successfully at: ${mongoUri}`);
-
-    try {
-      const bcrypt = require('bcryptjs');
-      const User = require('../models/User');
-      const passHash = await bcrypt.hash('Password123!', 10);
-      await User.create([
-        {
-          name: 'Alex Rivera',
-          email: 'alex@student.edu',
-          passwordHash: passHash,
-          role: 'student',
-          bio: 'Full-stack developer.',
-          skills: [{ name: 'React', proficiency: 'Advanced' }, { name: 'Node.js', proficiency: 'Intermediate' }],
-          onboardingCompleted: true
-        },
-        {
-          name: 'Sarah Chen',
-          email: 'sarah@student.edu',
-          passwordHash: passHash,
-          role: 'student',
-          bio: 'AI enthusiast.',
-          onboardingCompleted: true
-        },
-        {
-          name: 'Platform Admin',
-          email: 'admin@partnerfinder.com',
-          passwordHash: passHash,
-          role: 'admin',
-          onboardingCompleted: true
-        }
-      ]);
-      console.log(`[MongoDB Memory Server] Auto-seeded demo accounts.`);
-    } catch (seedErr) {
-      console.warn('[MongoDB Memory Server Seed Warning]', seedErr.message);
-    }
+    console.log(`[MongoDB Memory Server Dev] In-memory development database running at: ${mongoUri}`);
 
     cachedConn = conn;
     return conn;
   } catch (memErr) {
-    console.error(`[MongoDB Critical Error] Failed to initialize in-memory database: ${memErr.message}`);
-    return null;
+    console.error(`[MongoDB Error] Failed to initialize in-memory development database: ${memErr.message}`);
+    throw memErr;
   }
 };
 

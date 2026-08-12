@@ -1,7 +1,19 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (import.meta.env.MODE === 'production') {
+    // In production without explicit VITE_API_URL, use relative '/api' endpoint (matching vercel.json routes)
+    // instead of falling back to localhost 127.0.0.1:5000
+    return '/api';
+  }
+  return 'http://127.0.0.1:5000/api';
+};
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api',
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json'
   }

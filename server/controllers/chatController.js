@@ -1,4 +1,5 @@
 const Message = require('../models/Message');
+const { emitDirectMessage, emitGroupMessage } = require('../config/socket');
 
 const getDirectMessages = async (req, res, next) => {
   try {
@@ -47,6 +48,17 @@ const sendMessage = async (req, res, next) => {
     const populated = await Message.findById(message._id)
       .populate('senderId', 'name avatar')
       .populate('recipientId', 'name avatar');
+
+    // AFTER successful DB write, trigger real-time Socket.IO emission to recipient/group!
+    try {
+      if (recipientId) {
+        emitDirectMessage(recipientId, populated);
+      } else if (projectId) {
+        emitGroupMessage(projectId, populated);
+      }
+    } catch (socketErr) {
+      console.warn('[Socket Emission Notice]', socketErr.message);
+    }
 
     res.status(201).json(populated);
   } catch (error) {

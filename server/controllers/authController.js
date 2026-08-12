@@ -2,10 +2,20 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const getJwtSecret = () => {
+  if (process.env.JWT_SECRET) {
+    return process.env.JWT_SECRET;
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable is missing in production.');
+  }
+  return 'super_secret_jwt_key_project_partner_finder_2026';
+};
+
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role, email: user.email },
-    process.env.JWT_SECRET || 'super_secret_jwt_key_project_partner_finder_2026',
+    getJwtSecret(),
     { expiresIn: '30d' }
   );
 };

@@ -12,9 +12,17 @@ const ProjectCard = ({ project }) => {
       <div className="space-y-3">
         {/* Header Badges */}
         <div className="flex justify-between items-start gap-2">
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-            {project.type || 'Side Project'}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              {project.type || 'Side Project'}
+            </span>
+
+            {(project.status === 'Team Full' || project.status === 'Team Complete') && (
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                Team Full
+              </span>
+            )}
+          </div>
 
           {project.matchScore !== undefined && (
             <MatchScoreBadge 

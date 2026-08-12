@@ -147,13 +147,20 @@ const deleteProject = async (req, res, next) => {
     }
 
     if (project.ownerId.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Unauthorized action.' });
+      return res.status(403).json({ message: 'Unauthorized action. Only project owner can delete this project.' });
     }
+
+    const Application = require('../models/Application');
+    const Task = require('../models/Task');
+    const Message = require('../models/Message');
 
     await Project.findByIdAndDelete(req.params.id);
     await Team.deleteOne({ projectId: req.params.id });
+    await Application.deleteMany({ projectId: req.params.id });
+    await Task.deleteMany({ projectId: req.params.id });
+    await Message.deleteMany({ projectId: req.params.id });
 
-    res.json({ message: 'Project deleted successfully.' });
+    res.json({ message: 'Project and all related workspace data deleted successfully.' });
   } catch (error) {
     next(error);
   }

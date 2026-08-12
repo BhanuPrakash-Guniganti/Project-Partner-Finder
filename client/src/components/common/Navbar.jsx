@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { fetchNotifications, markAllNotificationsRead } from '../../services/api';
 import { 
   Briefcase, Users, FileText, Bell, MessageSquare, 
-  Sparkles, ShieldAlert, LogOut, User, Menu, X, PlusCircle, Check, Send
+  Sparkles, ShieldAlert, LogOut, User, Menu, X, PlusCircle, Check, Send,
+  Sun, Moon, Monitor
 } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -57,7 +61,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-3">
           
-          {/* Brand Logo - Fully Visible */}
+          {/* Brand Logo - Left */}
           <Link to={user ? "/dashboard" : "/"} className="flex items-center space-x-2.5 group flex-shrink-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform flex-shrink-0">
               <Sparkles className="w-5 h-5 text-white" />
@@ -72,8 +76,8 @@ const Navbar = () => {
             </div>
           </Link>
 
-          {/* Desktop Nav Links - Single Line Centered */}
-          <div className="hidden xl:flex items-center space-x-1.5 flex-shrink-0">
+          {/* Desktop Nav Links - Center */}
+          <div className="hidden lg:flex items-center space-x-1.5 flex-1 justify-center max-w-4xl px-2">
             {user && navLinks.map(link => {
               const Icon = link.icon;
               const isActive = location.pathname === link.path;
@@ -81,7 +85,7 @@ const Navbar = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs xl:text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`flex items-center space-x-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-xs xl:text-sm font-medium whitespace-nowrap transition-all ${
                     isActive 
                       ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold' 
                       : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
@@ -99,9 +103,9 @@ const Navbar = () => {
             })}
           </div>
 
-          {/* Medium Desktop Nav Links (1024px - 1280px) */}
-          <div className="hidden md:flex xl:hidden items-center space-x-1 flex-shrink-0">
-            {user && navLinks.map(link => {
+          {/* Tablet Nav Links (Medium Screens 768px - 1024px) */}
+          <div className="hidden md:flex lg:hidden items-center space-x-1 flex-shrink-0">
+            {user && navLinks.slice(0, 5).map(link => {
               const Icon = link.icon;
               const isActive = location.pathname === link.path;
               return (
@@ -123,7 +127,50 @@ const Navbar = () => {
           </div>
 
           {/* Desktop Right Action Bar */}
-          <div className="hidden md:flex items-center space-x-2.5 flex-shrink-0">
+          <div className="hidden md:flex items-center space-x-2 flex-shrink-0">
+            {/* Theme Selector Toggle */}
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => {
+                  setThemeDropdownOpen(!themeDropdownOpen);
+                  setNotifDropdownOpen(false);
+                }}
+                className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors flex items-center justify-center"
+                title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
+                aria-label="Toggle theme mode"
+              >
+                {theme === 'light' && <Sun className="w-4.5 h-4.5 text-amber-400" />}
+                {theme === 'dark' && <Moon className="w-4.5 h-4.5 text-cyan-400" />}
+                {theme === 'system' && <Monitor className="w-4.5 h-4.5 text-indigo-400" />}
+              </button>
+
+              {themeDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-36 glass-panel rounded-xl shadow-2xl py-1.5 border border-gray-800 z-50 text-xs">
+                  <button
+                    onClick={() => { setTheme('light'); setThemeDropdownOpen(false); }}
+                    className={`w-full px-3 py-2 text-left flex items-center space-x-2 transition-colors ${theme === 'light' ? 'bg-amber-500/15 text-amber-300 font-bold' : 'text-gray-300 hover:bg-gray-800'}`}
+                  >
+                    <Sun className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Light Mode</span>
+                  </button>
+                  <button
+                    onClick={() => { setTheme('dark'); setThemeDropdownOpen(false); }}
+                    className={`w-full px-3 py-2 text-left flex items-center space-x-2 transition-colors ${theme === 'dark' ? 'bg-cyan-500/15 text-cyan-300 font-bold' : 'text-gray-300 hover:bg-gray-800'}`}
+                  >
+                    <Moon className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Dark Mode</span>
+                  </button>
+                  <button
+                    onClick={() => { setTheme('system'); setThemeDropdownOpen(false); }}
+                    className={`w-full px-3 py-2 text-left flex items-center space-x-2 transition-colors ${theme === 'system' ? 'bg-indigo-500/15 text-indigo-300 font-bold' : 'text-gray-300 hover:bg-gray-800'}`}
+                  >
+                    <Monitor className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>System Theme</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {user ? (
               <>
                 {/* Create Project Action Button */}

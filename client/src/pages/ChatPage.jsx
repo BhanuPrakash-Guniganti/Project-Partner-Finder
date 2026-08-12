@@ -91,8 +91,7 @@ const ChatPage = () => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedUser) return;
 
-    const messageText = newMessage;
-    setNewMessage('');
+    const messageText = newMessage.trim();
 
     try {
       const res = await sendMessageApi({
@@ -101,13 +100,7 @@ const ChatPage = () => {
       });
 
       appendMessageDeduplicated(res.data);
-      
-      if (socket) {
-        socket.emit('send_direct_message', {
-          ...res.data,
-          recipientId: selectedUser._id
-        });
-      }
+      setNewMessage('');
     } catch (err) {
       console.error('[Chat Send Error]', err);
     }

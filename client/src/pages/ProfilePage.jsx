@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { updateProfile } from '../services/api';
-import { User, Mail, Github, Linkedin, ExternalLink, Edit3, Check, Plus, Trash2 } from 'lucide-react';
+import { User, Mail, Github, Linkedin, ExternalLink, Edit3, Check, Plus, Trash2, Sun, Moon, Monitor } from 'lucide-react';
 
 const ProfilePage = () => {
   const { user, updateUserProfileState } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   
   const [name, setName] = useState(user?.name || '');
@@ -215,7 +217,7 @@ const ProfilePage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-800">
                 <div>
                   <h4 className="font-bold text-gray-400 uppercase text-[10px]">Weekly Availability</h4>
                   <span className="text-white font-semibold">{user?.availability || '10-15 hrs/wk'}</span>
@@ -238,8 +240,54 @@ const ProfilePage = () => {
                   </div>
                 </div>
               </div>
+
             </div>
           )}
+
+          {/* Theme Settings Section */}
+          <div className="pt-6 border-t border-gray-800 space-y-3">
+            <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+              <Sun className="w-4 h-4 text-amber-400" />
+              <span>Application Theme Preference</span>
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                onClick={() => setTheme('light')}
+                className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center space-x-2 transition-all ${
+                  theme === 'light' 
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-md' 
+                    : 'bg-gray-900 text-gray-300 border-gray-800 hover:border-gray-700'
+                }`}
+              >
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span>☀️ Light</span>
+              </button>
+
+              <button
+                onClick={() => setTheme('dark')}
+                className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center space-x-2 transition-all ${
+                  theme === 'dark' 
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md' 
+                    : 'bg-gray-900 text-gray-300 border-gray-800 hover:border-gray-700'
+                }`}
+              >
+                <Moon className="w-4 h-4 text-cyan-400" />
+                <span>🌙 Dark</span>
+              </button>
+
+              <button
+                onClick={() => setTheme('system')}
+                className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-center space-x-2 transition-all ${
+                  theme === 'system' 
+                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-md' 
+                    : 'bg-gray-900 text-gray-300 border-gray-800 hover:border-gray-700'
+                }`}
+              >
+                <Monitor className="w-4 h-4 text-indigo-400" />
+                <span>💻 System</span>
+              </button>
+            </div>
+          </div>
 
         </div>
       </main>

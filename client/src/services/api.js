@@ -5,9 +5,8 @@ const getBaseUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   if (import.meta.env.MODE === 'production') {
-    // In production without explicit VITE_API_URL, use relative '/api' endpoint (matching vercel.json routes)
-    // instead of falling back to localhost 127.0.0.1:5000
-    return '/api';
+    // In production, default to Render backend endpoint, fallback to relative '/api' if needed
+    return 'https://project-partner-finder-sa61.onrender.com/api';
   }
   return 'http://127.0.0.1:5000/api';
 };

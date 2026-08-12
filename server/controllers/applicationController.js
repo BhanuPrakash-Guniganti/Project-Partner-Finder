@@ -18,6 +18,15 @@ const applyToProject = async (req, res, next) => {
       return res.status(400).json({ message: 'You cannot apply to your own project.' });
     }
 
+    // Capacity Check
+    const team = await Team.findOne({ projectId });
+    const currentMemberCount = team ? team.members.length : 1;
+    const maxCapacity = project.teamSize || 4;
+
+    if (currentMemberCount >= maxCapacity || project.status === 'Team Full' || project.status === 'Team Complete') {
+      return res.status(400).json({ message: 'This project team is already full. Applications are closed.' });
+    }
+
     const existing = await Application.findOne({
       projectId,
       applicantId: req.user.id,
@@ -171,19 +180,27 @@ const respondApplication = async (req, res, next) => {
         });
       }
 
-      // Check if user is already in team
+      const maxCapacity = application.projectId.teamSize || 4;
       const exists = team.members.some(m => m.userId.toString() === application.applicantId.toString());
+
       if (!exists) {
+        if (team.members.length >= maxCapacity) {
+          return res.status(400).json({ 
+            message: `Cannot accept application. Team has reached maximum capacity of ${maxCapacity} members.` 
+          });
+        }
+
         team.members.push({
           userId: application.applicantId,
-          role: application.requestedRole,
+          role: application.requestedRole || 'Team Member',
           isOwner: false
         });
         await team.save();
       }
 
-      // Update project status to Team Forming / In Progress
-      await Project.findByIdAndUpdate(application.projectId._id, { status: 'Team Forming' });
+      // Automatically transition status to Team Full if capacity reached
+      const newStatus = team.members.length >= maxCapacity ? 'Team Full' : 'Team Forming';
+      await Project.findByIdAndUpdate(application.projectId._id, { status: newStatus });
 
       // Send notification
       const notification = await Notification.create({

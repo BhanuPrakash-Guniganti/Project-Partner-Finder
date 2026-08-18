@@ -68,8 +68,20 @@ const ProjectDetails = () => {
         }
       };
 
+      const handleStatusUpdate = (data) => {
+        const { applicationId, status } = data;
+        setIncomingApplications(prev => prev.map(app => 
+          app._id === applicationId ? { ...app, status } : app
+        ));
+      };
+
       socket.on('new_application', handleNewApp);
-      return () => socket.off('new_application', handleNewApp);
+      socket.on('application_status_updated', handleStatusUpdate);
+
+      return () => {
+        socket.off('new_application', handleNewApp);
+        socket.off('application_status_updated', handleStatusUpdate);
+      };
     }
   }, [socket, id]);
 

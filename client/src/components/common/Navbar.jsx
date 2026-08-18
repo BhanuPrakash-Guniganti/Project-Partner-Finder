@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,12 +16,33 @@ const Navbar = () => {
   const { socket } = useSocket();
   const navigate = useNavigate();
   const location = useLocation();
+  const navRef = useRef(null);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    setNotifDropdownOpen(false);
+    setThemeDropdownOpen(false);
+    setProfileDropdownOpen(false);
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        setNotifDropdownOpen(false);
+        setThemeDropdownOpen(false);
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -81,7 +102,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 glass-panel border-b border-gray-800/80 bg-[#0b0f19]/95 backdrop-blur-md">
+    <nav ref={navRef} className="sticky top-0 z-50 glass-panel border-b border-gray-800/80 bg-[#0b0f19]/95 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2">
           
@@ -271,12 +292,17 @@ const Navbar = () => {
                   )}
                 </div>
 
-                {/* Profile Circle Avatar Only */}
-                <div className="flex items-center space-x-1.5 border-l border-gray-800 pl-2.5 flex-shrink-0">
-                  <Link 
-                    to="/profile" 
-                    title={user.name ? `My Profile (${user.name})` : 'My Profile'}
-                    className="flex items-center justify-center transition-transform hover:scale-105 flex-shrink-0"
+                {/* Profile Circle Avatar & User Menu Dropdown */}
+                <div className="relative border-l border-gray-800 pl-2.5 flex-shrink-0">
+                  <button
+                    onClick={() => {
+                      setProfileDropdownOpen(!profileDropdownOpen);
+                      setNotifDropdownOpen(false);
+                      setThemeDropdownOpen(false);
+                    }}
+                    title={user.name ? `Account (${user.name})` : 'Account'}
+                    className="flex items-center justify-center transition-transform hover:scale-105 flex-shrink-0 focus:outline-none"
+                    aria-expanded={profileDropdownOpen}
                   >
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/50 text-white flex items-center justify-center font-bold text-xs shadow-md">
                       {user.avatar ? (
@@ -285,21 +311,51 @@ const Navbar = () => {
                         user.name?.charAt(0)?.toUpperCase() || 'U'
                       )}
                     </div>
-                  </Link>
-
-                  {user.role === 'admin' && (
-                    <Link to="/admin" className="p-1.5 rounded-lg text-purple-400 hover:bg-purple-900/20 flex-shrink-0" title="Admin Dashboard">
-                      <ShieldAlert className="w-4.5 h-4.5" />
-                    </Link>
-                  )}
-
-                  <button
-                    onClick={logout}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-950/30 transition-colors flex-shrink-0"
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-4.5 h-4.5" />
                   </button>
+
+                  {profileDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 glass-panel rounded-xl shadow-2xl py-1.5 border border-gray-800 z-50 animate-fadeIn">
+                      <div className="px-3.5 py-2 border-b border-gray-800/80 min-w-0">
+                        <div className="font-bold text-white text-xs truncate">{user.name}</div>
+                        <div className="text-[10px] text-cyan-400 truncate">{user.email}</div>
+                      </div>
+
+                      <div className="py-1">
+                        <Link
+                          to="/profile"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center space-x-2.5 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors font-medium"
+                        >
+                          <User className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                          <span>Profile</span>
+                        </Link>
+
+                        {user.role === 'admin' && (
+                          <Link
+                            to="/admin"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center space-x-2.5 px-3.5 py-2 text-xs text-purple-300 hover:bg-purple-950/30 transition-colors font-medium"
+                          >
+                            <ShieldAlert className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                            <span>Admin Dashboard</span>
+                          </Link>
+                        )}
+                      </div>
+
+                      <div className="pt-1 border-t border-gray-800/80">
+                        <button
+                          onClick={() => {
+                            setProfileDropdownOpen(false);
+                            logout();
+                          }}
+                          className="w-full flex items-center space-x-2.5 px-3.5 py-2 text-xs text-red-400 hover:bg-red-950/30 transition-colors font-medium text-left"
+                        >
+                          <LogOut className="w-4 h-4 text-red-400 flex-shrink-0" />
+                          <span>Logout</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

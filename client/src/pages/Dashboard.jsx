@@ -65,7 +65,7 @@ const Dashboard = () => {
       {/* Header with PartnerFinder Logo, Notifications & Profile */}
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 w-full space-y-5 sm:space-y-6 flex-1 min-w-0">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 md:pb-10 pb-[calc(7rem+env(safe-area-inset-bottom))] w-full space-y-5 sm:space-y-6 flex-1 min-w-0">
         
         {/* HERO SECTION */}
         <section className="glass-panel p-4 sm:p-6 rounded-3xl border border-gray-800 relative overflow-hidden shadow-xl">

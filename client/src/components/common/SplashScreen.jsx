@@ -1,13 +1,11 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import AppIcon from './AppIcon';
 
 const SplashScreen = ({ text = "Loading PartnerFinder..." }) => {
   return (
     <div className="fixed inset-0 z-50 bg-[#0b0f19] flex flex-col items-center justify-center space-y-6 text-center p-4">
       <div className="relative">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-cyan-500/30 animate-pulse">
-          <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-white animate-spin-slow" />
-        </div>
+        <AppIcon size="xl" className="shadow-2xl shadow-cyan-500/30 animate-pulse" />
         <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-cyan-400 rounded-full animate-ping" />
       </div>
 

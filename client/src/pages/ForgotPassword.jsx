@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import AppIcon from '../components/common/AppIcon';
 import { Sparkles, Mail, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const ForgotPassword = () => {
@@ -35,9 +36,7 @@ const ForgotPassword = () => {
         <div className="w-full max-w-md glass-panel p-6 sm:p-8 rounded-2xl border border-gray-800 shadow-2xl space-y-6">
           
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto">
-              <Sparkles className="w-6 h-6" />
-            </div>
+            <AppIcon size="lg" className="mx-auto shadow-lg shadow-cyan-500/20" />
             <h2 className="text-2xl font-bold text-white">Reset Your Password</h2>
             <p className="text-xs text-gray-400">Enter your university email to receive a 6-digit verification code</p>
           </div>

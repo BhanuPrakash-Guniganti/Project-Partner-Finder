@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import AppIcon from '../components/common/AppIcon';
 import { Sparkles, Lock, KeyRound, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
@@ -65,9 +66,7 @@ const ResetPassword = () => {
         <div className="w-full max-w-md glass-panel p-6 sm:p-8 rounded-2xl border border-gray-800 shadow-2xl space-y-6">
           
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/20">
-              <KeyRound className="w-6 h-6" />
-            </div>
+            <AppIcon size="lg" className="mx-auto shadow-lg shadow-cyan-500/20" />
             <h2 className="text-2xl font-bold text-white">Enter OTP & New Password</h2>
             <p className="text-xs text-gray-400">
               Check {initialEmail ? <span className="text-cyan-400 font-semibold">{initialEmail}</span> : 'your email'} for the 6-digit verification code

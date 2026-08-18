@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { fetchNotifications, markAllNotificationsRead } from '../../services/api';
+import AppLogo from './AppLogo';
+import AppIcon from './AppIcon';
 import { 
   Briefcase, Users, FileText, Bell, MessageSquare, 
   Sparkles, ShieldAlert, LogOut, User, Menu, X, PlusCircle, Check, Send,
@@ -119,7 +121,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2">
           
-          {/* Mobile Hamburger Icon & Brand Logo */}
+          {/* Mobile Hamburger Icon & Official Brand Logo */}
           <div className="flex items-center space-x-3 flex-shrink-0">
             <button
               onClick={() => setMobileDrawerOpen(true)}
@@ -129,18 +131,8 @@ const Navbar = () => {
               <Menu className="w-6 h-6 text-cyan-400" />
             </button>
 
-            <Link to={user ? "/dashboard" : "/"} className="flex items-center space-x-2.5 group flex-shrink-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform flex-shrink-0">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-shrink-0">
-                <span className="text-base sm:text-lg lg:text-xl font-bold font-sans tracking-tight gradient-text block leading-tight whitespace-nowrap">
-                  PartnerFinder
-                </span>
-                <span className="text-[8px] sm:text-[9px] block text-cyan-400 font-semibold tracking-wider uppercase -mt-0.5 whitespace-nowrap">
-                  Project & Skill Matching
-                </span>
-              </div>
+            <Link to={user ? "/dashboard" : "/"} className="flex items-center group flex-shrink-0">
+              <AppLogo size="md" />
             </Link>
           </div>
 
@@ -184,7 +176,7 @@ const Navbar = () => {
 
             {user ? (
               <>
-                {/* Notifications Link / Dropdown Trigger */}
+                {/* Notifications Link */}
                 <Link
                   to="/notifications"
                   className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 relative transition-colors"
@@ -225,7 +217,7 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* MOBILE SLIDE-OUT DRAWER WITH TRANSLECENT BACKDROP */}
+      {/* MOBILE SLIDE-OUT DRAWER WITH TRANSLUCENT BACKDROP */}
       {mobileDrawerOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex animate-fadeIn">
           
@@ -243,12 +235,7 @@ const Navbar = () => {
               
               {/* Logo & Close Button */}
               <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-md">
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="font-bold text-white text-base gradient-text">PartnerFinder</span>
-                </div>
+                <AppLogo size="sm" showSubtitle={false} />
 
                 <button
                   onClick={() => setMobileDrawerOpen(false)}

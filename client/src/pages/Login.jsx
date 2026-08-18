@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import AppIcon from '../components/common/AppIcon';
 import { Sparkles, Lock, Mail, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
@@ -52,9 +53,7 @@ const Login = () => {
           
           {/* Logo & Welcome Header */}
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/20">
-              <Sparkles className="w-6 h-6" />
-            </div>
+            <AppIcon size="lg" className="mx-auto shadow-lg shadow-cyan-500/20" />
             <div>
               <span className="text-sm font-bold text-cyan-400 uppercase tracking-widest block">PartnerFinder</span>
               <h2 className="text-2xl font-bold text-white leading-tight">Welcome Back</h2>

@@ -5,8 +5,11 @@ import BottomNav from './components/common/BottomNav';
 import { ToastProvider } from './context/ToastContext';
 
 import Home from './pages/Home';
+import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
@@ -32,8 +35,11 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Authenticated Student Routes */}
           <Route element={<ProtectedRoute />}>

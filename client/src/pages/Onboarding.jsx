@@ -3,26 +3,42 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateOnboarding } from '../services/api';
 import Navbar from '../components/common/Navbar';
-import { Check, ArrowRight, ArrowLeft, Sparkles, Plus, Trash2 } from 'lucide-react';
+import Footer from '../components/common/Footer';
+import { useToast } from '../context/ToastContext';
+import { Check, ArrowRight, ArrowLeft, Sparkles, Plus, Trash2, User, Code2, Clock, Image, Globe, Github, Linkedin } from 'lucide-react';
 
 const Onboarding = () => {
   const { user, updateUserProfileState } = useAuth();
   const navigate = useNavigate();
+  const { showSuccess } = useToast();
 
   const [step, setStep] = useState(1);
   const [bio, setBio] = useState(user?.bio || '');
+  const [location, setLocation] = useState('');
+  const [githubLink, setGithubLink] = useState(user?.links?.github || '');
+  const [linkedinLink, setLinkedinLink] = useState(user?.links?.linkedin || '');
+  const [portfolioLink, setPortfolioLink] = useState(user?.links?.portfolio || '');
+
   const [skills, setSkills] = useState(user?.skills || [
     { name: 'React', proficiency: 'Intermediate' },
-    { name: 'Node.js', proficiency: 'Intermediate' }
+    { name: 'JavaScript', proficiency: 'Advanced' }
   ]);
   const [newSkillName, setNewSkillName] = useState('');
   const [newSkillProf, setNewSkillProf] = useState('Intermediate');
 
+  const [experienceLevel, setExperienceLevel] = useState(user?.experienceLevel || 'Intermediate');
   const [interests, setInterests] = useState(user?.interests || ['Web Development', 'AI / ML']);
   const [availability, setAvailability] = useState(user?.availability || '10-15 hrs/week');
-  const [preferredRoles, setPreferredRoles] = useState(user?.preferredRoles || ['Frontend Developer', 'Backend Developer']);
-  const [projectPreferences, setProjectPreferences] = useState(user?.projectPreferences || ['Hackathon', 'Side Project']);
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar || '');
   const [loading, setLoading] = useState(false);
+
+  const defaultAvatars = [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80'
+  ];
 
   const handleAddSkill = () => {
     if (!newSkillName.trim()) return;
@@ -34,11 +50,11 @@ const Onboarding = () => {
     setSkills(skills.filter((_, i) => i !== index));
   };
 
-  const toggleSelection = (list, setList, item) => {
-    if (list.includes(item)) {
-      setList(list.filter(i => i !== item));
+  const toggleInterest = (interest) => {
+    if (interests.includes(interest)) {
+      setInterests(interests.filter(i => i !== interest));
     } else {
-      setList([...list, item]);
+      setInterests([...interests, interest]);
     }
   };
 
@@ -48,12 +64,18 @@ const Onboarding = () => {
       const res = await updateOnboarding({
         bio,
         skills,
+        experienceLevel,
         interests,
         availability,
-        preferredRoles,
-        projectPreferences
+        avatar: avatarUrl,
+        links: {
+          github: githubLink,
+          linkedin: linkedinLink,
+          portfolio: portfolioLink
+        }
       });
       updateUserProfileState(res.data);
+      showSuccess('Profile setup completed successfully!');
       navigate('/dashboard');
     } catch (err) {
       console.error(err);
@@ -63,103 +85,192 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
       <Navbar />
 
-      <div className="flex-1 flex items-center justify-center p-4 py-8">
-        <div className="w-full max-w-xl glass-panel p-8 rounded-2xl border border-gray-800 shadow-2xl space-y-6">
+      <main className="flex-1 flex items-center justify-center p-4 py-6 w-full min-w-0">
+        <div className="w-full max-w-xl glass-panel p-6 sm:p-8 rounded-2xl border border-gray-800 shadow-2xl space-y-6">
           
-          {/* Progress Bar */}
+          {/* Progress Indicator */}
           <div className="space-y-2">
-            <div className="flex justify-between text-xs text-gray-400 font-semibold">
+            <div className="flex justify-between items-center text-xs text-gray-400 font-semibold">
               <span>Step {step} of 6</span>
               <span className="text-cyan-400 font-bold">{Math.round((step / 6) * 100)}% Complete</span>
             </div>
-            <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full transition-all duration-300" style={{ width: `${(step / 6) * 100}%` }}></div>
+            <div className="w-full h-2 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full transition-all duration-300"
+                style={{ width: `${(step / 6) * 100}%` }}
+              />
             </div>
           </div>
 
-          {/* STEP 1: BIO */}
+          {/* STEP 1: BASIC INFORMATION */}
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fadeIn">
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white">Step 1: Student Bio & Overview</h3>
-                <p className="text-xs text-gray-400">Tell potential project owners and teammates about your background.</p>
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Step 1 of 6</span>
+                <h3 className="text-xl font-bold text-white">Basic Profile Information</h3>
+                <p className="text-xs text-gray-400">Introduce yourself to potential teammates and project owners.</p>
               </div>
-              <textarea
-                rows="4"
-                placeholder="Share your technical interests, favorite tech stack, or what you hope to build..."
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
-              />
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">About / Student Bio</label>
+                  <textarea
+                    rows="3"
+                    placeholder="Share your background, technical interests, or what projects you want to build..."
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">GitHub Profile URL</label>
+                    <div className="relative">
+                      <Github className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
+                      <input
+                        type="url"
+                        placeholder="https://github.com/username"
+                        value={githubLink}
+                        onChange={(e) => setGithubLink(e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">LinkedIn Profile URL</label>
+                    <div className="relative">
+                      <Linkedin className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
+                      <input
+                        type="url"
+                        placeholder="https://linkedin.com/in/username"
+                        value={linkedinLink}
+                        onChange={(e) => setLinkedinLink(e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* STEP 2: SKILLS */}
+          {/* STEP 2: TECHNICAL SKILLS */}
           {step === 2 && (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fadeIn">
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white">Step 2: Skills & Proficiency</h3>
-                <p className="text-xs text-gray-400">Add technical skills and select your proficiency level.</p>
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Step 2 of 6</span>
+                <h3 className="text-xl font-bold text-white">Technical Skills & Proficiency</h3>
+                <p className="text-xs text-gray-400">Add your skills and explicitly select your proficiency level.</p>
               </div>
 
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {skills.map((s, idx) => (
-                  <div key={idx} className="flex justify-between items-center bg-gray-900 p-2.5 rounded-lg border border-gray-800 text-xs">
-                    <span className="font-bold text-cyan-300">{s.name}</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-[11px]">{s.proficiency}</span>
-                      <button onClick={() => handleRemoveSkill(idx)} className="text-red-400 hover:text-red-300 p-1">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {skills.length === 0 ? (
+                  <div className="text-xs text-gray-500 p-4 text-center bg-gray-900/40 rounded-xl border border-gray-800">
+                    No skills added yet. Add your first technical skill below!
                   </div>
-                ))}
+                ) : (
+                  skills.map((s, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-gray-900 p-3 rounded-xl border border-gray-800 text-xs">
+                      <span className="font-bold text-cyan-300">{s.name}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-cyan-950/60 text-cyan-400 border border-cyan-800 text-[10px] font-semibold">
+                          {s.proficiency}
+                        </span>
+                        <button onClick={() => handleRemoveSkill(idx)} className="text-red-400 hover:text-red-300 p-1">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
-              <div className="flex gap-2 pt-2 border-t border-gray-800">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-800">
                 <input
                   type="text"
-                  placeholder="Skill name (e.g. React, Python)"
+                  placeholder="Skill name (e.g. React, Python, Flutter)"
                   value={newSkillName}
                   onChange={(e) => setNewSkillName(e.target.value)}
-                  className="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
                 />
                 <select
                   value={newSkillProf}
                   onChange={(e) => setNewSkillProf(e.target.value)}
-                  className="bg-gray-900 border border-gray-800 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
                 >
                   <option value="Beginner">Beginner</option>
                   <option value="Intermediate">Intermediate</option>
                   <option value="Advanced">Advanced</option>
                   <option value="Expert">Expert</option>
                 </select>
-                <button onClick={handleAddSkill} className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold flex items-center space-x-1">
+                <button onClick={handleAddSkill} className="px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1">
                   <Plus className="w-4 h-4" />
-                  <span>Add</span>
+                  <span>Add Skill</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: INTERESTS */}
+          {/* STEP 3: EXPERIENCE LEVEL */}
           {step === 3 && (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fadeIn">
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white">Step 3: Domains & Technical Interests</h3>
-                <p className="text-xs text-gray-400">Select domains you are interested in working on.</p>
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Step 3 of 6</span>
+                <h3 className="text-xl font-bold text-white">Experience Level</h3>
+                <p className="text-xs text-gray-400">Select your overall software development experience level.</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {['Web Development', 'Mobile App', 'AI / ML', 'Data Science', 'Blockchain', 'UI/UX Design', 'Cloud / DevOps', 'Cybersecurity', 'Game Dev'].map(domain => {
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                {[
+                  { level: 'Beginner', desc: 'Learning fundamentals & building initial side projects' },
+                  { level: 'Intermediate', desc: 'Built multi-tier web/mobile apps & worked in teams' },
+                  { level: 'Advanced', desc: 'Proficient in architectures, APIs, databases & CI/CD' },
+                  { level: 'Expert', desc: 'Lead developer experience, complex systems & mentoring' }
+                ].map((item) => (
+                  <button
+                    key={item.level}
+                    type="button"
+                    onClick={() => setExperienceLevel(item.level)}
+                    className={`p-4 rounded-2xl border text-left transition-all space-y-1 ${
+                      experienceLevel === item.level
+                        ? 'bg-cyan-950/60 border-cyan-500 text-cyan-300 shadow-lg'
+                        : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:border-gray-700'
+                    }`}
+                  >
+                    <div className="text-xs font-bold text-white">{item.level}</div>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">{item.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: PROJECT INTERESTS */}
+          {step === 4 && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="space-y-1">
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Step 4 of 6</span>
+                <h3 className="text-xl font-bold text-white">Project Interests & Domains</h3>
+                <p className="text-xs text-gray-400">Select domains and project types you want to work on.</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  'Web Development', 'Mobile App', 'AI / ML', 'Cloud Computing',
+                  'Data Science', 'Blockchain', 'Open Source', 'Hackathons',
+                  'UI/UX Design', 'Cybersecurity', 'Game Dev', 'DevOps'
+                ].map(domain => {
                   const selected = interests.includes(domain);
                   return (
                     <button
                       key={domain}
                       type="button"
-                      onClick={() => toggleSelection(interests, setInterests, domain)}
+                      onClick={() => toggleInterest(domain)}
                       className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
                         selected 
                           ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/10' 
@@ -174,22 +285,24 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* STEP 4: AVAILABILITY */}
-          {step === 4 && (
-            <div className="space-y-4">
+          {/* STEP 5: AVAILABILITY */}
+          {step === 5 && (
+            <div className="space-y-4 animate-fadeIn">
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white">Step 4: Weekly Availability</h3>
-                <p className="text-xs text-gray-400">How many hours per week can you dedicate to team projects?</p>
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Step 5 of 6</span>
+                <h3 className="text-xl font-bold text-white">Weekly Availability</h3>
+                <p className="text-xs text-gray-400">How many hours per week can you dedicate to team collaboration?</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {['5-10 hrs/week', '10-15 hrs/week', '15-20 hrs/week', '20+ hrs/week'].map(opt => (
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+                {['1-5 hrs/week', '5-10 hrs/week', '10-15 hrs/week', '15-20 hrs/week', '20+ hrs/week', 'Weekends Only'].map(opt => (
                   <button
                     key={opt}
                     type="button"
                     onClick={() => setAvailability(opt)}
-                    className={`p-4 rounded-xl border text-xs font-bold transition-all text-center ${
+                    className={`p-3.5 rounded-xl border text-xs font-bold transition-all text-center ${
                       availability === opt
-                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500 shadow-md'
+                        ? 'bg-indigo-950/60 border-indigo-500 text-indigo-300 shadow-md'
                         : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
                     }`}
                   >
@@ -200,60 +313,51 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* STEP 5: PREFERRED ROLES */}
-          {step === 5 && (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white">Step 5: Preferred Team Roles</h3>
-                <p className="text-xs text-gray-400">Select roles you prefer to take on in projects.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {['Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'UI/UX Designer', 'Machine Learning Engineer', 'DevOps Engineer', 'Project Lead'].map(roleOpt => {
-                  const selected = preferredRoles.includes(roleOpt);
-                  return (
-                    <button
-                      key={roleOpt}
-                      type="button"
-                      onClick={() => toggleSelection(preferredRoles, setPreferredRoles, roleOpt)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                        selected 
-                          ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50' 
-                          : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
-                      }`}
-                    >
-                      {roleOpt}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* STEP 6: PREFERRED PROJECT TYPES */}
+          {/* STEP 6: PROFILE PHOTO */}
           {step === 6 && (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fadeIn">
               <div className="space-y-1">
-                <h3 className="text-xl font-bold text-white">Step 6: Preferred Project Types</h3>
-                <p className="text-xs text-gray-400">What kinds of projects do you want to join?</p>
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Step 6 of 6</span>
+                <h3 className="text-xl font-bold text-white">Profile Avatar & Photo</h3>
+                <p className="text-xs text-gray-400">Choose a developer avatar or paste your image URL.</p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {['Academic', 'Hackathon', 'Open Source', 'Research', 'Side Project', 'Startup'].map(pType => {
-                  const selected = projectPreferences.includes(pType);
-                  return (
-                    <button
-                      key={pType}
-                      type="button"
-                      onClick={() => toggleSelection(projectPreferences, setProjectPreferences, pType)}
-                      className={`p-3 rounded-xl border text-xs font-bold transition-all text-center ${
-                        selected
-                          ? 'bg-purple-500/20 text-purple-300 border-purple-500'
-                          : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
-                      }`}
-                    >
-                      {pType}
-                    </button>
-                  );
-                })}
+
+              <div className="flex flex-col items-center space-y-4 pt-1">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border-2 border-cyan-400 text-white flex items-center justify-center font-bold text-2xl shadow-xl overflow-hidden">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.name?.charAt(0)?.toUpperCase() || 'U'
+                  )}
+                </div>
+
+                <div className="w-full space-y-2">
+                  <label className="text-xs font-semibold text-gray-300 block text-center">Pick a Developer Avatar</label>
+                  <div className="flex justify-center gap-3">
+                    {defaultAvatars.map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt={`Avatar ${i}`}
+                        onClick={() => setAvatarUrl(url)}
+                        className={`w-10 h-10 rounded-full object-cover cursor-pointer border-2 transition-transform hover:scale-110 ${
+                          avatarUrl === url ? 'border-cyan-400 scale-105 shadow-md shadow-cyan-500/20' : 'border-transparent opacity-70'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="w-full space-y-1 pt-2 border-t border-gray-800">
+                  <label className="text-xs font-semibold text-gray-300">Or Paste Image URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -264,7 +368,7 @@ const Onboarding = () => {
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-white rounded-lg flex items-center space-x-1"
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-white rounded-xl flex items-center space-x-1 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back</span>
@@ -275,7 +379,7 @@ const Onboarding = () => {
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
-                className="gradient-btn px-5 py-2 rounded-lg text-xs font-bold text-white flex items-center space-x-1 shadow-lg"
+                className="gradient-btn px-5 py-2 rounded-xl text-xs font-bold text-white flex items-center space-x-1 shadow-lg"
               >
                 <span>Next Step</span>
                 <ArrowRight className="w-4 h-4" />
@@ -285,16 +389,18 @@ const Onboarding = () => {
                 type="button"
                 onClick={handleFinish}
                 disabled={loading}
-                className="gradient-btn px-6 py-2 rounded-lg text-xs font-bold text-white flex items-center space-x-1 shadow-lg"
+                className="gradient-btn px-6 py-2 rounded-xl text-xs font-bold text-white flex items-center space-x-1 shadow-lg disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Finish & Go to Dashboard'}
+                {loading ? 'Saving Setup...' : 'Complete & Launch Dashboard'}
                 <Check className="w-4 h-4 ml-1" />
               </button>
             )}
           </div>
 
         </div>
-      </div>
+      </main>
+
+      <Footer />
     </div>
   );
 };

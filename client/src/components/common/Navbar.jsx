@@ -74,7 +74,7 @@ const Navbar = () => {
     { name: 'Projects', path: '/projects', icon: Briefcase },
     { name: 'Candidates', path: '/candidates', icon: Users },
     { name: 'Recommendations', path: '/recommendations', icon: Sparkles },
-    { name: 'Resume AI', path: '/resume-analyzer', icon: FileText, badge: 'Grok AI' },
+    { name: 'Resume AI', path: '/resume-analyzer', icon: FileText },
     { name: 'My Teams', path: '/teams', icon: Users },
     { name: 'Applications', path: '/applications', icon: Send },
     { name: 'Chat', path: '/chat', icon: MessageSquare }

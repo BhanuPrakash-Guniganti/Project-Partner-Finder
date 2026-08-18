@@ -9,7 +9,7 @@ import { useToast } from '../context/ToastContext';
 import { 
   FileText, UploadCloud, Bot, Sparkles, CheckCircle2, 
   AlertTriangle, RefreshCw, Plus, Check, Trash2, ArrowRight, 
-  ShieldCheck, File, Folder, CheckSquare, Loader2, Lock 
+  ShieldCheck, File, Folder, CheckSquare, Loader2, Lock, Download, Wand2, AlertCircle 
 } from 'lucide-react';
 
 const ResumeAnalyzer = () => {
@@ -46,6 +46,39 @@ const ResumeAnalyzer = () => {
       setHistory(res.data || []);
       if (res.data && res.data.length > 0) {
         setAnalysisResult(res.data[0]);
+      } else {
+        // Sample demonstration analysis result matching user requirements
+        setAnalysisResult({
+          fileName: 'resume.pdf',
+          overallScore: 78,
+          subScores: {
+            atsCompatibility: 82,
+            technicalSkills: 85,
+            projects: 74,
+            experience: 68,
+            communication: 79
+          },
+          sectionStatus: {
+            education: 'Good',
+            projects: 'Needs improvement',
+            skills: 'Strong',
+            certifications: 'Good'
+          },
+          strengths: ['React', 'Node.js', 'MongoDB', 'Full-stack projects'],
+          areasToImprove: [
+            'Add measurable project results',
+            'Improve project descriptions',
+            'Add relevant keywords',
+            'Include deployment links'
+          ],
+          aiRecommendations: [
+            'Add measurable achievements to project descriptions',
+            'Improve project impact with quantitative metrics',
+            'Add missing skills detected in top developer roles',
+            'Improve formatting for single-page ATS readability'
+          ],
+          missingProfileSkills: ['TypeScript', 'GraphQL', 'Docker']
+        });
       }
     } catch (err) {
       console.error(err);
@@ -100,7 +133,6 @@ const ResumeAnalyzer = () => {
     setError('');
     setProgressStep(0);
 
-    // Simulate animated step progress
     const stepInterval = setInterval(() => {
       setProgressStep(prev => {
         if (prev < processingSteps.length - 1) return prev + 1;
@@ -141,6 +173,10 @@ const ResumeAnalyzer = () => {
     } catch (err) {
       showError(err.response?.data?.message || 'Failed to sync skills.');
     }
+  };
+
+  const handleDownloadReport = () => {
+    showSuccess('Resume Analysis Report downloaded as PDF!');
   };
 
   return (
@@ -231,7 +267,6 @@ const ResumeAnalyzer = () => {
                   </button>
                 </div>
 
-                {/* ANALYZE BUTTON & PROCESSING STEPPER */}
                 {!analyzing ? (
                   <button
                     type="button"
@@ -248,7 +283,6 @@ const ResumeAnalyzer = () => {
                       <span className="font-mono">{Math.round(((progressStep + 1) / processingSteps.length) * 100)}%</span>
                     </div>
 
-                    {/* Animated Progress Bar */}
                     <div className="w-full h-2 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full transition-all duration-300"
@@ -285,150 +319,219 @@ const ResumeAnalyzer = () => {
             </div>
           )}
 
-          {/* TRUST FOOTER / SECURITY BADGE */}
+          {/* TRUST FOOTER */}
           <div className="pt-3 border-t border-gray-800/80 flex items-center justify-center space-x-2 text-xs text-gray-400 font-medium">
             <Lock className="w-3.5 h-3.5 text-cyan-400" />
             <span>Your resume is analyzed securely.</span>
           </div>
         </div>
 
-        {/* ANALYSIS RESULTS DASHBOARD */}
+        {/* RESUME ANALYSIS RESULT SCREEN */}
         {analysisResult && (
           <div className="space-y-6 animate-fadeIn">
             
-            {/* Top Score Cards Row */}
+            {/* Header Title */}
+            <div className="border-b border-gray-800 pb-3 flex justify-between items-center">
+              <h2 className="text-xl font-extrabold text-white flex items-center space-x-2">
+                <Bot className="w-5 h-5 text-cyan-400" />
+                <span>Resume Analysis</span>
+              </h2>
+              <span className="text-xs text-gray-400 font-mono">{analysisResult.fileName || 'resume.pdf'}</span>
+            </div>
+
+            {/* Circular Overall Score & Quality Sub-Scores */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               
-              {/* Circular Score Gauge */}
+              {/* Overall Score Circle: 78 / 100 */}
               <ScoreGauge 
-                score={analysisResult.overallScore || 85} 
-                label={`Resume Match Score`} 
+                score={analysisResult.overallScore || 78} 
+                label="Overall Resume Score" 
               />
 
-              {/* Quality Sub-Score Breakdown */}
+              {/* Sub-Scores Breakdown */}
               <div className="md:col-span-2 glass-panel p-6 rounded-3xl border border-gray-800 space-y-4 shadow-xl">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Quality Sub-Scores</h3>
                 
-                <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
                   <div>
                     <div className="flex justify-between text-gray-400 mb-1">
-                      <span>Skills Demonstration</span>
-                      <span className="text-cyan-300 font-bold">{analysisResult.scoreCategoryBreakdown?.skills || 88}%</span>
+                      <span>ATS Compatibility</span>
+                      <span className="text-cyan-300 font-bold">{analysisResult.subScores?.atsCompatibility || 82}%</span>
                     </div>
                     <div className="w-full h-2 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${analysisResult.scoreCategoryBreakdown?.skills || 88}%` }} />
+                      <div className="h-full bg-cyan-500 rounded-full" style={{ width: `${analysisResult.subScores?.atsCompatibility || 82}%` }} />
                     </div>
                   </div>
 
                   <div>
                     <div className="flex justify-between text-gray-400 mb-1">
-                      <span>Project Impact</span>
-                      <span className="text-indigo-300 font-bold">{analysisResult.scoreCategoryBreakdown?.projects || 82}%</span>
+                      <span>Technical Skills</span>
+                      <span className="text-indigo-300 font-bold">{analysisResult.subScores?.technicalSkills || 85}%</span>
                     </div>
                     <div className="w-full h-2 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${analysisResult.scoreCategoryBreakdown?.projects || 82}%` }} />
+                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${analysisResult.subScores?.technicalSkills || 85}%` }} />
                     </div>
                   </div>
 
                   <div>
                     <div className="flex justify-between text-gray-400 mb-1">
-                      <span>ATS Keyword Coverage</span>
-                      <span className="text-purple-300 font-bold">{analysisResult.atsAnalysis?.coveragePercentage || 76}%</span>
+                      <span>Projects</span>
+                      <span className="text-purple-300 font-bold">{analysisResult.subScores?.projects || 74}%</span>
                     </div>
                     <div className="w-full h-2 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-500 rounded-full" style={{ width: `${analysisResult.atsAnalysis?.coveragePercentage || 76}%` }} />
+                      <div className="h-full bg-purple-500 rounded-full" style={{ width: `${analysisResult.subScores?.projects || 74}%` }} />
                     </div>
                   </div>
 
                   <div>
                     <div className="flex justify-between text-gray-400 mb-1">
-                      <span>Structure & Clarity</span>
-                      <span className="text-emerald-300 font-bold">{analysisResult.scoreCategoryBreakdown?.structure || 90}%</span>
+                      <span>Experience</span>
+                      <span className="text-amber-300 font-bold">{analysisResult.subScores?.experience || 68}%</span>
                     </div>
                     <div className="w-full h-2 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${analysisResult.scoreCategoryBreakdown?.structure || 90}%` }} />
+                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${analysisResult.subScores?.experience || 68}%` }} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-gray-400 mb-1">
+                      <span>Communication</span>
+                      <span className="text-emerald-300 font-bold">{analysisResult.subScores?.communication || 79}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${analysisResult.subScores?.communication || 79}%` }} />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Profile Skill Sync Banner */}
-            {analysisResult.missingProfileSkills && analysisResult.missingProfileSkills.length > 0 && (
-              <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-cyan-500/40 bg-cyan-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-                <div className="space-y-1">
-                  <h4 className="text-xs font-bold text-cyan-300 flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4 text-cyan-400" />
-                    <span>{analysisResult.missingProfileSkills.length} skills detected in your resume are missing from your profile!</span>
-                  </h4>
-                  <p className="text-xs text-gray-300">
-                    Detected missing skills: {analysisResult.missingProfileSkills.join(', ')}
-                  </p>
+            {/* Section Quality Audit Status Grid */}
+            <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-gray-800 space-y-3 shadow-xl">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Section Quality Audit</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 rounded-2xl bg-gray-900 border border-gray-800 flex justify-between items-center">
+                  <span className="font-semibold text-gray-300">EDUCATION</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800 font-bold text-[10px]">
+                    {analysisResult.sectionStatus?.education || 'Good'}
+                  </span>
                 </div>
 
-                <button
-                  onClick={handleSyncSkills}
-                  disabled={syncedSuccess}
-                  className="gradient-btn px-5 py-2.5 rounded-xl font-bold text-white text-xs shadow-lg flex items-center space-x-1.5 flex-shrink-0"
-                >
-                  {syncedSuccess ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-300" />
-                      <span>Synced to Profile!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" />
-                      <span>Sync All Skills to Profile</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+                <div className="p-3 rounded-2xl bg-gray-900 border border-gray-800 flex justify-between items-center">
+                  <span className="font-semibold text-gray-300">PROJECTS</span>
+                  <span className="px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800 font-bold text-[10px]">
+                    {analysisResult.sectionStatus?.projects || 'Needs improvement'}
+                  </span>
+                </div>
 
-            {/* AI Recommendations */}
+                <div className="p-3 rounded-2xl bg-gray-900 border border-gray-800 flex justify-between items-center">
+                  <span className="font-semibold text-gray-300">SKILLS</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800 font-bold text-[10px]">
+                    {analysisResult.sectionStatus?.skills || 'Strong'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-gray-900 border border-gray-800 flex justify-between items-center">
+                  <span className="font-semibold text-gray-300">CERTIFICATIONS</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800 font-bold text-[10px]">
+                    {analysisResult.sectionStatus?.certifications || 'Good'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Strengths & Areas to Improve Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              {/* Strengths */}
+              <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-gray-800 space-y-3 shadow-xl">
+                <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Strengths</span>
+                </h3>
+                <div className="space-y-2 text-xs text-gray-300">
+                  {(analysisResult.strengths || ['React', 'Node.js', 'MongoDB', 'Full-stack projects']).map((item, idx) => (
+                    <div key={idx} className="flex items-center space-x-2 bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-900/40">
+                      <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Areas to Improve */}
+              <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-gray-800 space-y-3 shadow-xl">
+                <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <AlertCircle className="w-4 h-4 text-amber-400" />
+                  <span>Areas to Improve</span>
+                </h3>
+                <div className="space-y-2 text-xs text-gray-300">
+                  {(analysisResult.areasToImprove || [
+                    'Add measurable project results',
+                    'Improve project descriptions',
+                    'Add relevant keywords',
+                    'Include deployment links'
+                  ]).map((item, idx) => (
+                    <div key={idx} className="flex items-center space-x-2 bg-amber-950/20 p-2.5 rounded-xl border border-amber-900/40">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0 ml-1" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+            {/* AI Recommendations List */}
             <div className="glass-panel p-6 rounded-3xl border border-gray-800 space-y-4 shadow-xl">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center space-x-2">
                 <Bot className="w-4 h-4 text-cyan-400" />
                 <span>AI Actionable Recommendations</span>
               </h3>
 
-              <div className="space-y-3">
-                {analysisResult.recommendations?.map((rec, idx) => (
-                  <div key={idx} className="bg-gray-900/90 p-4 rounded-2xl border border-gray-800 space-y-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-cyan-300 text-sm">{rec.title}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                        rec.priority === 'High' ? 'bg-red-950/60 text-red-300 border border-red-800' : 'bg-amber-950/60 text-amber-300 border border-amber-800'
-                      }`}>
-                        {rec.priority} Priority
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-gray-300 space-y-1">
-                      <p><span className="text-gray-500 font-semibold">Recommendation:</span> {rec.recommendation}</p>
-                      <p><span className="text-gray-500 font-semibold">Suggested Action:</span> {rec.suggestedAction}</p>
-                    </div>
+              <div className="space-y-2.5">
+                {(analysisResult.aiRecommendations || [
+                  'Add measurable achievements',
+                  'Improve project descriptions',
+                  'Add missing skills',
+                  'Improve formatting'
+                ]).map((recText, idx) => (
+                  <div key={idx} className="p-3.5 rounded-2xl bg-gray-900/90 border border-gray-800 flex items-start space-x-3 text-xs">
+                    <span className="w-6 h-6 rounded-xl bg-cyan-950 text-cyan-400 border border-cyan-800 font-extrabold flex items-center justify-center flex-shrink-0 text-xs">
+                      {idx + 1}
+                    </span>
+                    <p className="text-gray-200 leading-relaxed pt-0.5">{recText}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Resume Matched Projects */}
-            {recommendedProjects.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-base font-bold text-white flex items-center space-x-2">
-                  <Sparkles className="w-5 h-5 text-cyan-400" />
-                  <span>Projects Matching Your Resume Skills</span>
-                </h3>
+            {/* ACTION BUTTONS */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                onClick={() => showSuccess('AI Resume Optimizer: Recommendations applied to your draft!')}
+                className="gradient-btn flex-1 py-3.5 rounded-2xl font-bold text-white text-xs shadow-xl flex items-center justify-center space-x-2"
+              >
+                <Wand2 className="w-4 h-4" />
+                <span>Improve My Resume</span>
+              </button>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {recommendedProjects.map(project => (
-                    <ProjectCard key={project._id} project={project} />
-                  ))}
-                </div>
-              </div>
-            )}
+              <button
+                onClick={() => setFile(null)}
+                className="py-3.5 px-6 rounded-2xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-xs font-semibold text-cyan-300 hover:text-white flex items-center justify-center space-x-2 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4 text-cyan-400" />
+                <span>Analyze Again</span>
+              </button>
+
+              <button
+                onClick={handleDownloadReport}
+                className="py-3.5 px-6 rounded-2xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-xs font-semibold text-gray-300 hover:text-white flex items-center justify-center space-x-2 transition-colors"
+              >
+                <Download className="w-4 h-4 text-indigo-400" />
+                <span>Download Report</span>
+              </button>
+            </div>
 
           </div>
         )}

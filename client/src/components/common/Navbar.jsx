@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useSocket } from '../../context/SocketContext';
 import { fetchNotifications, markAllNotificationsRead } from '../../services/api';
 import { 
   Briefcase, Users, FileText, Bell, MessageSquare, 
@@ -12,8 +13,10 @@ import {
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
@@ -25,6 +28,27 @@ const Navbar = () => {
       loadNotifications();
     }
   }, [user, location.pathname]);
+
+  // Real-time Socket.IO notification listener for instant UI updates without page refresh
+  useEffect(() => {
+    if (socket) {
+      const handleNewNotification = (notif) => {
+        setNotifications(prev => {
+          if (notif._id && prev.some(n => n._id === notif._id)) {
+            return prev;
+          }
+          return [notif, ...prev];
+        });
+        setUnreadCount(prev => prev + 1);
+      };
+
+      socket.on('new_notification', handleNewNotification);
+
+      return () => {
+        socket.off('new_notification', handleNewNotification);
+      };
+    }
+  }, [socket]);
 
   const loadNotifications = async () => {
     try {
@@ -58,10 +82,10 @@ const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-50 glass-panel border-b border-gray-800/80 bg-[#0b0f19]/95 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-3">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-2">
           
-          {/* Brand Logo - Left */}
+          {/* Brand Logo - Fixed No Truncation */}
           <Link to={user ? "/dashboard" : "/"} className="flex items-center space-x-2.5 group flex-shrink-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform flex-shrink-0">
               <Sparkles className="w-5 h-5 text-white" />
@@ -138,35 +162,41 @@ const Navbar = () => {
                 }}
                 className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors flex items-center justify-center"
                 title={`Theme: ${theme.charAt(0).toUpperCase() + theme.slice(1)}`}
-                aria-label="Toggle theme mode"
               >
-                {theme === 'light' && <Sun className="w-4.5 h-4.5 text-amber-400" />}
-                {theme === 'dark' && <Moon className="w-4.5 h-4.5 text-cyan-400" />}
-                {theme === 'system' && <Monitor className="w-4.5 h-4.5 text-indigo-400" />}
+                {theme === 'light' ? (
+                  <Sun className="w-4 h-4 text-amber-400" />
+                ) : theme === 'dark' ? (
+                  <Moon className="w-4 h-4 text-cyan-400" />
+                ) : (
+                  <Monitor className="w-4 h-4 text-indigo-400" />
+                )}
               </button>
 
               {themeDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-36 glass-panel rounded-xl shadow-2xl py-1.5 border border-gray-800 z-50 text-xs">
-                  <button
-                    onClick={() => { setTheme('light'); setThemeDropdownOpen(false); }}
-                    className={`w-full px-3 py-2 text-left flex items-center space-x-2 transition-colors ${theme === 'light' ? 'bg-amber-500/15 text-amber-300 font-bold' : 'text-gray-300 hover:bg-gray-800'}`}
-                  >
-                    <Sun className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Light Mode</span>
-                  </button>
+                <div className="absolute right-0 mt-2 w-36 glass-panel rounded-xl shadow-2xl py-1 border border-gray-800 z-50">
+                  <div className="px-3 py-1 border-b border-gray-800 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Select Theme
+                  </div>
                   <button
                     onClick={() => { setTheme('dark'); setThemeDropdownOpen(false); }}
-                    className={`w-full px-3 py-2 text-left flex items-center space-x-2 transition-colors ${theme === 'dark' ? 'bg-cyan-500/15 text-cyan-300 font-bold' : 'text-gray-300 hover:bg-gray-800'}`}
+                    className={`w-full flex items-center space-x-2 px-3 py-2 text-xs transition-colors ${theme === 'dark' ? 'text-cyan-400 font-bold bg-cyan-950/40' : 'text-gray-300 hover:bg-gray-800'}`}
                   >
                     <Moon className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Dark Mode</span>
+                    <span>Dark</span>
+                  </button>
+                  <button
+                    onClick={() => { setTheme('light'); setThemeDropdownOpen(false); }}
+                    className={`w-full flex items-center space-x-2 px-3 py-2 text-xs transition-colors ${theme === 'light' ? 'text-amber-400 font-bold bg-amber-950/40' : 'text-gray-300 hover:bg-gray-800'}`}
+                  >
+                    <Sun className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Light</span>
                   </button>
                   <button
                     onClick={() => { setTheme('system'); setThemeDropdownOpen(false); }}
-                    className={`w-full px-3 py-2 text-left flex items-center space-x-2 transition-colors ${theme === 'system' ? 'bg-indigo-500/15 text-indigo-300 font-bold' : 'text-gray-300 hover:bg-gray-800'}`}
+                    className={`w-full flex items-center space-x-2 px-3 py-2 text-xs transition-colors ${theme === 'system' ? 'text-indigo-400 font-bold bg-indigo-950/40' : 'text-gray-300 hover:bg-gray-800'}`}
                   >
                     <Monitor className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>System Theme</span>
+                    <span>System</span>
                   </button>
                 </div>
               )}
@@ -177,7 +207,7 @@ const Navbar = () => {
                 {/* Create Project Action Button */}
                 <Link
                   to="/projects/new"
-                  className="gradient-btn flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white shadow-lg whitespace-nowrap flex-shrink-0"
+                  className="gradient-btn flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white shadow-lg whitespace-nowrap flex-shrink-0"
                 >
                   <PlusCircle className="w-4 h-4 flex-shrink-0" />
                   <span className="whitespace-nowrap">Create Project</span>
@@ -186,7 +216,10 @@ const Navbar = () => {
                 {/* Notifications Bell */}
                 <div className="relative flex-shrink-0">
                   <button
-                    onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                    onClick={() => {
+                      setNotifDropdownOpen(!notifDropdownOpen);
+                      setThemeDropdownOpen(false);
+                    }}
                     className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 relative transition-colors"
                     title="Notifications"
                   >
@@ -201,7 +234,10 @@ const Navbar = () => {
                   {notifDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-80 glass-panel rounded-xl shadow-2xl py-2 border border-gray-800 z-50">
                       <div className="px-4 py-2 border-b border-gray-800 flex justify-between items-center">
-                        <span className="text-sm font-bold text-white">Notifications</span>
+                        <span className="text-sm font-bold text-white flex items-center space-x-1.5">
+                          <Bell className="w-4 h-4 text-cyan-400" />
+                          <span>Notifications</span>
+                        </span>
                         {unreadCount > 0 && (
                           <button onClick={handleMarkAllRead} className="text-xs text-cyan-400 hover:underline flex items-center space-x-1">
                             <Check className="w-3 h-3" />
@@ -220,11 +256,11 @@ const Navbar = () => {
                                 setNotifDropdownOpen(false);
                                 if (n.link) navigate(n.link);
                               }}
-                              className={`p-3 text-xs cursor-pointer transition-colors ${n.isRead ? 'opacity-60 hover:opacity-90' : 'bg-cyan-950/30 text-white font-medium'}`}
+                              className={`p-3 text-xs cursor-pointer transition-colors ${n.isRead ? 'opacity-60 hover:opacity-90' : 'bg-cyan-950/30 text-white font-medium border-l-2 border-cyan-400'}`}
                             >
                               <div className="font-semibold text-cyan-300 mb-0.5">{n.title}</div>
                               <p className="text-gray-300 break-words">{n.message}</p>
-                              <span className="text-[10px] text-gray-500 mt-1 block">
+                              <span className="text-[10px] text-gray-500 mt-1 block font-mono">
                                 {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
@@ -235,7 +271,7 @@ const Navbar = () => {
                   )}
                 </div>
 
-                {/* Profile Circle Avatar Only (No user name text) */}
+                {/* Profile Circle Avatar Only */}
                 <div className="flex items-center space-x-1.5 border-l border-gray-800 pl-2.5 flex-shrink-0">
                   <Link 
                     to="/profile" 
@@ -280,6 +316,19 @@ const Navbar = () => {
 
           {/* Mobile Right Section */}
           <div className="flex md:hidden items-center space-x-1.5 flex-shrink-0">
+            {/* Mobile Theme Selector */}
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <Sun className="w-5 h-5 text-amber-400" />
+              ) : (
+                <Moon className="w-5 h-5 text-cyan-400" />
+              )}
+            </button>
+
             {user && (
               <div className="relative">
                 <button
@@ -352,7 +401,7 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Menu Drawer */}
+      {/* Sleek Mobile Menu Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden glass-panel border-b border-gray-800 px-4 pt-3 pb-6 space-y-4 bg-[#0b0f19]/98 animate-fadeIn">
           {user ? (

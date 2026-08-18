@@ -48,7 +48,17 @@ const initSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`[Socket.IO] Client connected: ${socket.id}`);
 
-    // Register user socket & join private room
+    // Auto-register user room if userId passed in handshake query or auth
+    const handshakeUserId = normalizeId(socket.handshake.query?.userId || socket.handshake.auth?.userId);
+    if (handshakeUserId) {
+      addSocketForUser(handshakeUserId, socket.id);
+      socket.userId = handshakeUserId;
+      socket.join(`user_${handshakeUserId}`);
+      io.emit('online_users', getOnlineUserIds());
+      console.log(`[Socket.IO] Handshake auto-registered user: ${handshakeUserId} (socket ${socket.id})`);
+    }
+
+    // Register user socket & join private room explicitly
     socket.on('user_connected', (rawUserId) => {
       const userId = normalizeId(rawUserId);
       if (userId) {
@@ -56,7 +66,7 @@ const initSocket = (server) => {
         socket.userId = userId;
         socket.join(`user_${userId}`);
         io.emit('online_users', getOnlineUserIds());
-        console.log(`[Socket.IO] User registered: ${userId} (socket ${socket.id})`);
+        console.log(`[Socket.IO] User registered via event: ${userId} (socket ${socket.id})`);
       }
     });
 

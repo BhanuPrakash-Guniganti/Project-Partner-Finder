@@ -27,8 +27,9 @@ export const SocketProvider = ({ children }) => {
       const newSocket = io(socketUrl, {
         withCredentials: true,
         reconnection: true,
-        reconnectionAttempts: 10,
-        reconnectionDelay: 1000
+        reconnectionAttempts: 15,
+        reconnectionDelay: 1000,
+        query: { userId: user._id }
       });
 
       newSocket.on('connect', () => {

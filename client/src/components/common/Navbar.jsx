@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,7 +8,7 @@ import { fetchNotifications } from '../../services/api';
 import AppLogo from './AppLogo';
 import { 
   Briefcase, Users, FileText, Bell, MessageSquare, 
-  Sparkles, LogOut, User, Menu, X, PlusCircle, Settings, Home, Compass, HelpCircle, ChevronRight, Sun, Moon, Monitor 
+  Sparkles, LogOut, User, Menu, X, PlusCircle, Settings, Home, Compass, HelpCircle, ChevronRight, Sun, Moon 
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -17,12 +18,18 @@ const Navbar = () => {
   const location = useLocation();
   const navRef = useRef(null);
 
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  // Single clear state for mobile navigation drawer
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
-  // Lock body scroll while mobile drawer is open, restore cleanly when closed
   useEffect(() => {
-    if (mobileDrawerOpen) {
+    setMounted(true);
+  }, []);
+
+  // Lock body scroll cleanly while mobile drawer is open, restore when closed
+  useEffect(() => {
+    if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -30,10 +37,11 @@ const Navbar = () => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [mobileDrawerOpen]);
+  }, [isMobileMenuOpen]);
 
+  // Close drawer automatically when route changes
   useEffect(() => {
-    setMobileDrawerOpen(false);
+    setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -63,7 +71,23 @@ const Navbar = () => {
     }
   };
 
-  // Complete Mobile Navigation Menu Items using existing routes
+  const handleOpenMobileMenu = (e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    console.log('[Navbar] Opening hamburger navigation drawer');
+    setIsMobileMenuOpen(true);
+  };
+
+  const handleCloseMobileMenu = (e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    console.log('[Navbar] Closing hamburger navigation drawer');
+    setIsMobileMenuOpen(false);
+  };
+
+  // Complete Navigation Menu Items
   const mobileMenuItems = [
     { name: 'Home', path: '/dashboard', icon: Home },
     { name: 'Discover / Find Teammates', path: '/candidates', icon: Compass },
@@ -87,19 +111,180 @@ const Navbar = () => {
     { name: 'Chat', path: '/chat', icon: MessageSquare }
   ];
 
+  // Render Portal directly to document.body so drawer is never clipped
+  const renderMobileDrawer = () => {
+    if (!isMobileMenuOpen) return null;
+
+    const drawerContent = (
+      <div className="fixed inset-0 z-[99999] lg:hidden flex animate-fadeIn">
+        {/* Backdrop Overlay */}
+        <div
+          onClick={handleCloseMobileMenu}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity cursor-pointer z-10"
+          aria-label="Close menu backdrop"
+        />
+
+        {/* Drawer Panel Container */}
+        <div className="relative w-80 max-w-[85vw] bg-[#0b0f19] border-r border-gray-800 h-full flex flex-col justify-between shadow-2xl z-20 overflow-hidden animate-slideRight">
+          
+          {/* DRAWER HEADER */}
+          <div className="p-4 border-b border-gray-800/80 bg-gray-900/60 space-y-4">
+            <div className="flex justify-between items-center">
+              <AppLogo size="sm" showSubtitle={false} />
+
+              <button
+                type="button"
+                onClick={handleCloseMobileMenu}
+                className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white cursor-pointer"
+                aria-label="Close navigation menu"
+              >
+                <X className="w-5 h-5 text-cyan-400 pointer-events-none" />
+              </button>
+            </div>
+
+            {user && (
+              <div className="p-3 rounded-2xl bg-gray-950 border border-gray-800/80 flex items-center space-x-3 shadow-md">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center font-bold text-sm overflow-hidden flex-shrink-0">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    user.name?.charAt(0)?.toUpperCase() || 'U'
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-white text-xs truncate">{user.name}</h3>
+                  <p className="text-[10px] text-cyan-400 truncate">{user.role || 'Full Stack Developer'}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* DRAWER MENU ITEMS */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-3 divide-y divide-gray-800/40">
+            <div className="space-y-1 pb-1">
+              {mobileMenuItems.map(item => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={handleCloseMobileMenu}
+                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
+                      isActive
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm font-bold'
+                        : 'text-gray-300 hover:bg-gray-900 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <Icon className="w-4 h-4 text-cyan-400 flex-shrink-0 pointer-events-none" />
+                      <span className="truncate">{item.name}</span>
+                    </div>
+
+                    {item.badge ? (
+                      <span className="w-4 h-4 rounded-full bg-cyan-500 text-black text-[9px] font-extrabold flex items-center justify-center flex-shrink-0">
+                        {item.badge}
+                      </span>
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-600 flex-shrink-0 pointer-events-none" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* PREFERENCES & THEME CONTROL */}
+            <div className="pt-3 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block px-1">Preferences & Theme</span>
+              <div className="p-2 rounded-2xl bg-gray-950 border border-gray-800 flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-300 flex items-center space-x-2">
+                  <Sun className="w-4 h-4 text-cyan-400 pointer-events-none" />
+                  <span>Appearance</span>
+                </span>
+                <div className="flex gap-1 bg-gray-900 p-1 rounded-xl border border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => setTheme('dark')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      theme === 'dark' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-gray-400'
+                    }`}
+                  >
+                    Dark
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme('light')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                      theme === 'light' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-gray-400'
+                    }`}
+                  >
+                    Light
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* DRAWER FOOTER LOGOUT */}
+          <div className="p-3 border-t border-gray-800/80 bg-gray-950/80">
+            {user ? (
+              <button
+                type="button"
+                onClick={() => {
+                  handleCloseMobileMenu();
+                  logout();
+                }}
+                className="w-full py-3 px-4 rounded-2xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/60 text-xs font-bold text-red-300 flex items-center justify-center space-x-2 transition-colors shadow-lg cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 text-red-400 pointer-events-none" />
+                <span>Logout</span>
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <Link
+                  to="/login"
+                  onClick={handleCloseMobileMenu}
+                  className="flex-1 py-2.5 text-center text-xs font-bold text-gray-300 bg-gray-900 rounded-xl border border-gray-800"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={handleCloseMobileMenu}
+                  className="gradient-btn flex-1 py-2.5 text-center text-xs font-bold text-white rounded-xl shadow-lg"
+                >
+                  Get Started
+                </Link>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    );
+
+    if (mounted && typeof document !== 'undefined' && document.body) {
+      return createPortal(drawerContent, document.body);
+    }
+    return drawerContent;
+  };
+
   return (
-    <nav ref={navRef} className="sticky top-0 z-50 glass-panel border-b border-gray-800/80 bg-[#0b0f19]/95 backdrop-blur-md w-full max-w-full overflow-x-hidden">
+    <nav ref={navRef} className="sticky top-0 z-50 glass-panel border-b border-gray-800/80 bg-[#0b0f19]/95 backdrop-blur-md w-full max-w-full">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 min-w-0">
           
           {/* LEFT: [Hamburger] [PartnerFinder Logo + Brand] */}
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink">
             <button
-              onClick={() => setMobileDrawerOpen(true)}
-              className="p-1.5 rounded-xl text-gray-300 hover:text-white hover:bg-gray-800 transition-colors md:hidden flex-shrink-0"
-              aria-label="Open mobile navigation drawer"
+              type="button"
+              onClick={handleOpenMobileMenu}
+              className="p-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-gray-800 transition-colors lg:hidden flex-shrink-0 cursor-pointer relative z-20"
+              aria-label="Open navigation menu"
+              aria-expanded={isMobileMenuOpen}
             >
-              <Menu className="w-5 h-5 text-cyan-400" />
+              <Menu className="w-5.5 h-5.5 text-cyan-400 pointer-events-none" />
             </button>
 
             <Link to={user ? "/dashboard" : "/"} className="flex items-center group min-w-0 flex-shrink">
@@ -109,7 +294,7 @@ const Navbar = () => {
           </div>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center space-x-1.5 flex-1 justify-center max-w-4xl px-2">
+          <div className="hidden lg:flex items-center space-x-1.5 flex-1 justify-center max-w-4xl px-2">
             {user && desktopNavLinks.map(link => {
               const Icon = link.icon;
               const isActive = location.pathname === link.path;
@@ -131,7 +316,7 @@ const Navbar = () => {
             })}
           </div>
 
-          {/* RIGHT: [Notification] [Profile Avatar] (Theme icon removed for compact mobile fit) */}
+          {/* RIGHT: [Notification] [Profile Avatar] */}
           <div className="flex items-center space-x-2 flex-shrink-0">
             {user ? (
               <>
@@ -150,7 +335,7 @@ const Navbar = () => {
                   )}
                 </Link>
 
-                {/* Profile Circle Avatar - Guaranteed 100% Inside Viewport */}
+                {/* Profile Circle Avatar */}
                 <Link
                   to="/profile"
                   className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/50 text-white flex items-center justify-center font-bold text-xs shadow-md overflow-hidden flex-shrink-0"
@@ -179,152 +364,8 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* POPULATED MOBILE NAVIGATION DRAWER WITH OVERLAY */}
-      {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex animate-fadeIn">
-          
-          {/* Backdrop Overlay */}
-          <div
-            onClick={() => setMobileDrawerOpen(false)}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
-            aria-label="Close menu backdrop"
-          />
-
-          {/* Drawer Panel Container */}
-          <div className="relative w-80 max-w-[85vw] bg-[#0b0f19] border-r border-gray-800 h-full flex flex-col justify-between shadow-2xl z-10 overflow-hidden animate-slideRight">
-            
-            {/* DRAWER HEADER */}
-            <div className="p-4 border-b border-gray-800/80 bg-gray-900/60 space-y-4">
-              <div className="flex justify-between items-center">
-                <AppLogo size="sm" showSubtitle={false} />
-
-                <button
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="p-1.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
-                  aria-label="Close mobile navigation drawer"
-                >
-                  <X className="w-5 h-5 text-cyan-400" />
-                </button>
-              </div>
-
-              {user && (
-                <div className="p-3 rounded-2xl bg-gray-950 border border-gray-800/80 flex items-center space-x-3 shadow-md">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center font-bold text-sm overflow-hidden flex-shrink-0">
-                    {user.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                    ) : (
-                      user.name?.charAt(0)?.toUpperCase() || 'U'
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-white text-xs truncate">{user.name}</h3>
-                    <p className="text-[10px] text-cyan-400 truncate">{user.role || 'Full Stack Developer'}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* DRAWER MENU ITEMS */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 divide-y divide-gray-800/40">
-              <div className="space-y-1 pb-1">
-                {mobileMenuItems.map(item => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setMobileDrawerOpen(false)}
-                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
-                        isActive
-                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm font-bold'
-                          : 'text-gray-300 hover:bg-gray-900 hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3 min-w-0">
-                        <Icon className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                        <span className="truncate">{item.name}</span>
-                      </div>
-
-                      {item.badge ? (
-                        <span className="w-4 h-4 rounded-full bg-cyan-500 text-black text-[9px] font-extrabold flex items-center justify-center flex-shrink-0">
-                          {item.badge}
-                        </span>
-                      ) : (
-                        <ChevronRight className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-
-              {/* PREFERENCES & THEME CONTROL */}
-              <div className="pt-3 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block px-1">Preferences & Theme</span>
-                <div className="p-2 rounded-2xl bg-gray-950 border border-gray-800 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-300 flex items-center space-x-2">
-                    <Sun className="w-4 h-4 text-cyan-400" />
-                    <span>Appearance</span>
-                  </span>
-                  <div className="flex gap-1 bg-gray-900 p-1 rounded-xl border border-gray-800">
-                    <button
-                      onClick={() => setTheme('dark')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                        theme === 'dark' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-gray-400'
-                      }`}
-                    >
-                      Dark
-                    </button>
-                    <button
-                      onClick={() => setTheme('light')}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                        theme === 'light' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-gray-400'
-                      }`}
-                    >
-                      Light
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* DRAWER FOOTER LOGOUT */}
-            <div className="p-3 border-t border-gray-800/80 bg-gray-950/80">
-              {user ? (
-                <button
-                  onClick={() => {
-                    setMobileDrawerOpen(false);
-                    logout();
-                  }}
-                  className="w-full py-3 px-4 rounded-2xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/60 text-xs font-bold text-red-300 flex items-center justify-center space-x-2 transition-colors shadow-lg"
-                >
-                  <LogOut className="w-4 h-4 text-red-400" />
-                  <span>Logout</span>
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileDrawerOpen(false)}
-                    className="flex-1 py-2.5 text-center text-xs font-bold text-gray-300 bg-gray-900 rounded-xl border border-gray-800"
-                  >
-                    Log In
-                  </Link>
-                  <Link
-                    to="/register"
-                    onClick={() => setMobileDrawerOpen(false)}
-                    className="gradient-btn flex-1 py-2.5 text-center text-xs font-bold text-white rounded-xl shadow-lg"
-                  >
-                    Get Started
-                  </Link>
-                </div>
-              )}
-            </div>
-
-          </div>
-        </div>
-      )}
+      {/* RENDER PORTAL FOR MOBILE DRAWER */}
+      {renderMobileDrawer()}
     </nav>
   );
 };

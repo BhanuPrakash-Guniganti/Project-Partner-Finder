@@ -65,24 +65,24 @@ const Dashboard = () => {
       {/* Header with PartnerFinder Logo, Notifications & Profile */}
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-8 flex-1 min-w-0">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 w-full space-y-5 sm:space-y-6 flex-1 min-w-0">
         
         {/* HERO SECTION */}
-        <section className="glass-panel p-6 sm:p-8 rounded-3xl border border-gray-800 relative overflow-hidden shadow-2xl">
-          <div className="absolute -right-12 -bottom-12 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-12 -top-12 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <section className="glass-panel p-4 sm:p-6 rounded-3xl border border-gray-800 relative overflow-hidden shadow-xl">
+          <div className="hidden sm:block absolute -right-12 -bottom-12 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="hidden sm:block absolute -left-12 -top-12 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 space-y-5">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-xs font-semibold text-cyan-300">
+          <div className="relative z-10 space-y-3.5">
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[11px] font-semibold text-cyan-300">
               <Sparkles className="w-3.5 h-3.5" />
               <span>Project & Skill Matching Engine</span>
             </div>
 
-            <div className="space-y-2 max-w-2xl">
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+            <div className="space-y-1 max-w-2xl">
+              <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
                 Find the right people for your next project.
               </h1>
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+              <p className="text-xs text-gray-300 leading-relaxed">
                 Discover teammates based on skills, interests and project requirements.
               </p>
             </div>

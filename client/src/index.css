@@ -69,9 +69,9 @@ html.light {
 }
 
 html.light .glass-panel {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05) !important;
 }
 
 .glass-card {
@@ -82,9 +82,9 @@ html.light .glass-panel {
 }
 
 html.light .glass-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
 }
 
 .glass-card:hover {
@@ -94,12 +94,20 @@ html.light .glass-card {
 }
 
 html.light .glass-card:hover {
-  border-color: rgba(2, 132, 199, 0.4);
-  box-shadow: 0 12px 30px -8px rgba(2, 132, 199, 0.12);
+  border-color: rgba(2, 132, 199, 0.4) !important;
+  box-shadow: 0 12px 30px -8px rgba(2, 132, 199, 0.12) !important;
 }
 
-/* Comprehensive Light Theme Color Overrides */
-html.light .bg-\[\#0b0f19\] {
+/* Comprehensive Light Theme Overrides for Navigation & UI Components */
+html.light nav {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+html.light .bg-\[\#0b0f19\],
+html.light .bg-\[\#0b0f19\]\/95,
+html.light .bg-\[\#0b0f19\]\/98,
+html.light .bg-\[\#0b0f19\]\/90 {
   background-color: #f8fafc !important;
 }
 
@@ -141,6 +149,11 @@ html.light .border-gray-700 {
   border-color: #e2e8f0 !important;
 }
 
+html.light .divide-gray-800\/50 > :not([hidden]) ~ :not([hidden]),
+html.light .divide-gray-800\/60 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f1f5f9 !important;
+}
+
 html.light input,
 html.light select,
 html.light textarea {
@@ -174,9 +187,15 @@ html.light .text-cyan-400 {
 
 html.light .bg-cyan-500\/10,
 html.light .bg-cyan-500\/15,
-html.light .bg-cyan-500\/20,
-html.light .bg-cyan-950\/40 {
+html.light .bg-cyan-500\/20 {
   background-color: #e0f2fe !important;
+}
+
+html.light .bg-cyan-950\/30,
+html.light .bg-cyan-950\/40,
+html.light .bg-cyan-950\/50,
+html.light .bg-cyan-950\/60 {
+  background-color: #f0f9ff !important;
 }
 
 html.light .border-cyan-500\/30,
@@ -195,6 +214,16 @@ html.light .text-indigo-300 {
 
 html.light .border-indigo-500\/30 {
   border-color: #a5b4fc !important;
+}
+
+html.light .shadow-2xl {
+  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Ensure Button Text Contrast in Light Theme */
+html.light .gradient-btn,
+html.light .gradient-btn * {
+  color: #ffffff !important;
 }
 
 /* Custom Gradients */

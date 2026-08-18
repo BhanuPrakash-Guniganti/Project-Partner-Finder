@@ -7,7 +7,7 @@ import { fetchNotifications, markAllNotificationsRead } from '../../services/api
 import { 
   Briefcase, Users, FileText, Bell, MessageSquare, 
   Sparkles, ShieldAlert, LogOut, User, Menu, X, PlusCircle, Check, Send,
-  Sun, Moon, Monitor
+  Sun, Moon, Monitor, Settings
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -328,6 +328,15 @@ const Navbar = () => {
                         >
                           <User className="w-4 h-4 text-cyan-400 flex-shrink-0" />
                           <span>Profile</span>
+                        </Link>
+
+                        <Link
+                          to="/settings"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center space-x-2.5 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors font-medium"
+                        >
+                          <Settings className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                          <span>Settings</span>
                         </Link>
 
                         {user.role === 'admin' && (

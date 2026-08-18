@@ -22,6 +22,7 @@ const ChatPage = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -139,6 +140,7 @@ const ChatPage = () => {
     }
   };
 
+  // Helper to safely append a message with strict _id deduplication
   const appendMessageDeduplicated = (newMsg) => {
     setMessages(prev => {
       if (newMsg._id && prev.some(m => m._id === newMsg._id)) {
@@ -148,6 +150,7 @@ const ChatPage = () => {
     });
   };
 
+  // Socket Real-time Listener for Direct & Group Messages with explicit cleanup
   useEffect(() => {
     if (socket) {
       const handleDirectMsg = (data) => {
@@ -168,7 +171,8 @@ const ChatPage = () => {
       const handleGroupMsg = (data) => {
         if (chatType !== 'project' || !selectedProject) return;
         const currentProjId = selectedProject._id || selectedProject;
-        if (data.projectId === currentProjId) {
+        const msgProjId = typeof data.projectId === 'object' ? data.projectId?._id : data.projectId;
+        if (msgProjId === currentProjId) {
           appendMessageDeduplicated(data);
         }
       };
@@ -185,9 +189,10 @@ const ChatPage = () => {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isSending) return;
 
     const messageText = newMessage.trim();
+    setIsSending(true);
 
     try {
       if (chatType === 'direct' && selectedUser) {
@@ -204,13 +209,12 @@ const ChatPage = () => {
           content: messageText
         });
         appendMessageDeduplicated(res.data);
-        if (socket) {
-          socket.emit('send_group_message', { ...res.data, projectId: projId });
-        }
         setNewMessage('');
       }
     } catch (err) {
       console.error('[Chat Send Error]', err);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -389,13 +393,14 @@ const ChatPage = () => {
                 <form onSubmit={handleSend} className="flex gap-2 pt-1 w-full min-w-0">
                   <input
                     type="text"
-                    placeholder={`Type message to ${selectedUser.name}...`}
+                    disabled={isSending}
+                    placeholder={isSending ? "Sending message..." : `Type message to ${selectedUser.name}...`}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 min-w-0 w-full bg-gray-900 border border-gray-800 rounded-xl px-3 sm:px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                    className="flex-1 min-w-0 w-full bg-gray-900 border border-gray-800 rounded-xl px-3 sm:px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 disabled:opacity-50"
                   />
-                  <button type="submit" className="gradient-btn px-4 sm:px-5 py-2.5 rounded-xl font-bold text-white text-xs shadow-lg flex items-center justify-center flex-shrink-0">
-                    <Send className="w-4 h-4" />
+                  <button disabled={isSending} type="submit" className="gradient-btn px-4 sm:px-5 py-2.5 rounded-xl font-bold text-white text-xs shadow-lg flex items-center justify-center flex-shrink-0 disabled:opacity-50">
+                    {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </button>
                 </form>
               </>
@@ -453,13 +458,14 @@ const ChatPage = () => {
                 <form onSubmit={handleSend} className="flex gap-2 pt-1 w-full min-w-0">
                   <input
                     type="text"
-                    placeholder={`Broadcast message to ${selectedProject.title || 'Project'}...`}
+                    disabled={isSending}
+                    placeholder={isSending ? "Sending broadcast..." : `Broadcast message to ${selectedProject.title || 'Project'}...`}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 min-w-0 w-full bg-gray-900 border border-gray-800 rounded-xl px-3 sm:px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                    className="flex-1 min-w-0 w-full bg-gray-900 border border-gray-800 rounded-xl px-3 sm:px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 disabled:opacity-50"
                   />
-                  <button type="submit" className="gradient-btn px-4 sm:px-5 py-2.5 rounded-xl font-bold text-white text-xs shadow-lg flex items-center justify-center flex-shrink-0">
-                    <Send className="w-4 h-4" />
+                  <button disabled={isSending} type="submit" className="gradient-btn px-4 sm:px-5 py-2.5 rounded-xl font-bold text-white text-xs shadow-lg flex items-center justify-center flex-shrink-0 disabled:opacity-50">
+                    {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </button>
                 </form>
               </>

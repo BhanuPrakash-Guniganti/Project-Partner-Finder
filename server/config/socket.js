@@ -90,23 +90,6 @@ const initSocket = (server) => {
       }
     });
 
-    // Handle Direct Message socket emission backup from client
-    socket.on('send_direct_message', (data) => {
-      const recipientId = normalizeId(data.recipientId);
-      if (recipientId) {
-        io.to(`user_${recipientId}`).emit('receive_direct_message', data);
-      }
-    });
-
-    // Handle Group Project Message
-    socket.on('send_group_message', (data) => {
-      const projectId = normalizeId(data.projectId);
-      if (projectId) {
-        const room = `project_${projectId}`;
-        socket.to(room).emit('receive_group_message', data);
-      }
-    });
-
     // Handle disconnect
     socket.on('disconnect', () => {
       if (socket.userId) {

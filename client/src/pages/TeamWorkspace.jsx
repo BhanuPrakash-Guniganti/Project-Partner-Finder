@@ -51,8 +51,12 @@ const TeamWorkspace = () => {
       socket.emit('join_project_room', projectId);
 
       const handleGroupMsg = (data) => {
-        if (data.projectId === projectId) {
-          setMessages(prev => [...prev, data]);
+        const msgProjId = typeof data.projectId === 'object' ? data.projectId?._id : data.projectId;
+        if (msgProjId === projectId) {
+          setMessages(prev => {
+            if (data._id && prev.some(m => m._id === data._id)) return prev;
+            return [...prev, data];
+          });
         }
       };
 
@@ -139,16 +143,18 @@ const TeamWorkspace = () => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
+    const msgContent = newMessage.trim();
+
     try {
       const res = await sendMessageApi({
         projectId,
-        content: newMessage
+        content: msgContent
       });
 
-      setMessages([...messages, res.data]);
-      if (socket) {
-        socket.emit('send_group_message', { ...res.data, projectId });
-      }
+      setMessages(prev => {
+        if (res.data._id && prev.some(m => m._id === res.data._id)) return prev;
+        return [...prev, res.data];
+      });
       setNewMessage('');
     } catch (err) {
       console.error(err);

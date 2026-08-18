@@ -26,6 +26,7 @@ import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import Settings from './pages/Settings';
 import HelpSupport from './pages/HelpSupport';
+import Notifications from './pages/Notifications';
 import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
@@ -60,6 +61,7 @@ function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<HelpSupport />} />
+            <Route path="/notifications" element={<Notifications />} />
           </Route>
 
           {/* Admin Only Route */}

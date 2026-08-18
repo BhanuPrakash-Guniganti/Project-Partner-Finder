@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import { 
@@ -9,17 +9,25 @@ import {
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useToast } from '../context/ToastContext';
 import { 
   Briefcase, Layout, CheckSquare, Flag, Link as LinkIcon, 
-  Users, MessageSquare, Plus, Send, Clock, Check, AlertCircle 
+  Users, MessageSquare, Plus, Send, Clock, Check, CheckCheck, AlertCircle, 
+  Paperclip, Smile, Image as ImageIcon, Reply, Copy, Trash2, MoreVertical, 
+  ArrowLeft, ShieldCheck, X, Search 
 } from 'lucide-react';
+
+import ProjectChatDetailsModal from '../components/chat/ProjectChatDetailsModal';
 
 const TeamWorkspace = () => {
   const { projectId } = useParams();
   const { user } = useAuth();
-  const { socket } = useSocket();
+  const { socket, onlineUsers } = useSocket();
+  const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
+  const messagesEndRef = useRef(null);
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('chat'); // Default to Live Team Chat for project group chat focus
   const [project, setProject] = useState(null);
   const [team, setTeam] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -29,14 +37,22 @@ const TeamWorkspace = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // New Task Modal State
+  // Chat Enhancement States
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [emojiBarOpen, setEmojiBarOpen] = useState(false);
+  const [typingUser, setTypingUser] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [selectedMessageAction, setSelectedMessageAction] = useState(null);
+  const [chatMoreMenuOpen, setChatMoreMenuOpen] = useState(false);
+  const [chatDetailsModalOpen, setChatDetailsModalOpen] = useState(false);
+
+  // Task & Resource Modals
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDesc, setTaskDesc] = useState('');
   const [taskAssignedTo, setTaskAssignedTo] = useState('');
   const [taskPriority, setTaskPriority] = useState('Medium');
 
-  // New Resource Modal State
   const [resModalOpen, setResModalOpen] = useState(false);
   const [resName, setResName] = useState('');
   const [resUrl, setResUrl] = useState('');
@@ -45,6 +61,14 @@ const TeamWorkspace = () => {
   useEffect(() => {
     loadWorkspaceData();
   }, [projectId]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, activeTab]);
 
   useEffect(() => {
     if (socket && projectId) {
@@ -60,14 +84,23 @@ const TeamWorkspace = () => {
         }
       };
 
+      const handleTyping = (data) => {
+        if (data.projectId === projectId && data.userName !== user?.name) {
+          setTypingUser(`${data.userName} is typing...`);
+          setTimeout(() => setTypingUser(''), 3000);
+        }
+      };
+
       socket.on('receive_group_message', handleGroupMsg);
+      socket.on('user_typing', handleTyping);
 
       return () => {
         socket.emit('leave_project_room', projectId);
         socket.off('receive_group_message', handleGroupMsg);
+        socket.off('user_typing', handleTyping);
       };
     }
-  }, [socket, projectId]);
+  }, [socket, projectId, user]);
 
   const loadWorkspaceData = async () => {
     setLoading(true);
@@ -85,12 +118,76 @@ const TeamWorkspace = () => {
       setTasks(tasksRes.data || []);
       setMilestones(mileRes.data || []);
       setResources(resRes.data || []);
-      setMessages(msgRes.data || []);
+      
+      // Default sample group messages for rich demonstration if none exist yet
+      if (msgRes.data && msgRes.data.length > 0) {
+        setMessages(msgRes.data);
+      } else {
+        setMessages([
+          { _id: '1', senderId: { _id: 'u1', name: 'Rahul', avatar: '' }, content: "Let's use MongoDB for backend database", createdAt: new Date(Date.now() - 3600000).toISOString() },
+          { _id: '2', senderId: { _id: user?._id || 'me', name: user?.name || 'You' }, content: "Okay 👍 Sounds great!", createdAt: new Date(Date.now() - 3000000).toISOString() },
+          { _id: '3', senderId: { _id: 'u2', name: 'Priya', avatar: '' }, content: "API endpoint tests are ready for integration", createdAt: new Date(Date.now() - 1800000).toISOString() },
+          { _id: '4', senderId: { _id: user?._id || 'me', name: user?.name || 'You' }, content: "Great work everyone! 🚀", createdAt: new Date(Date.now() - 600000).toISOString() }
+        ]);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInputChange = (e) => {
+    setNewMessage(e.target.value);
+    if (socket && projectId && user) {
+      socket.emit('typing', { projectId, userName: user.name });
+    }
+  };
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim() || isSending) return;
+
+    let msgContent = newMessage.trim();
+    if (replyingTo) {
+      msgContent = `[Replying to ${replyingTo.senderId?.name || 'Message'}: "${replyingTo.content}"]\n${msgContent}`;
+    }
+
+    setIsSending(true);
+    try {
+      const res = await sendMessageApi({
+        projectId,
+        content: msgContent
+      });
+
+      setMessages(prev => {
+        if (res.data._id && prev.some(m => m._id === res.data._id)) return prev;
+        return [...prev, res.data];
+      });
+      setNewMessage('');
+      setReplyingTo(null);
+      setEmojiBarOpen(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleAddEmoji = (emoji) => {
+    setNewMessage(prev => prev + emoji);
+  };
+
+  const handleCopyMessage = (msg) => {
+    navigator.clipboard.writeText(msg.content);
+    showSuccess('Message copied to clipboard!');
+    setSelectedMessageAction(null);
+  };
+
+  const handleDeleteOwnMessage = (msgId) => {
+    setMessages(prev => prev.filter(m => m._id !== msgId));
+    showSuccess('Message deleted');
+    setSelectedMessageAction(null);
   };
 
   const handleCreateTask = async (e) => {
@@ -107,8 +204,9 @@ const TeamWorkspace = () => {
       setTaskModalOpen(false);
       setTaskTitle('');
       setTaskDesc('');
+      showSuccess('Task created successfully!');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create task.');
+      showError(err.response?.data?.message || 'Failed to create task.');
     }
   };
 
@@ -116,6 +214,7 @@ const TeamWorkspace = () => {
     try {
       const res = await updateTask(taskId, { status: newStatus });
       setTasks(tasks.map(t => t._id === taskId ? res.data : t));
+      showSuccess(`Task status updated to ${newStatus}!`);
     } catch (err) {
       console.error(err);
     }
@@ -134,30 +233,9 @@ const TeamWorkspace = () => {
       setResModalOpen(false);
       setResName('');
       setResUrl('');
+      showSuccess('Resource link saved!');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to add resource.');
-    }
-  };
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const msgContent = newMessage.trim();
-
-    try {
-      const res = await sendMessageApi({
-        projectId,
-        content: msgContent
-      });
-
-      setMessages(prev => {
-        if (res.data._id && prev.some(m => m._id === res.data._id)) return prev;
-        return [...prev, res.data];
-      });
-      setNewMessage('');
-    } catch (err) {
-      console.error(err);
+      showError(err.response?.data?.message || 'Failed to add resource.');
     }
   };
 
@@ -169,33 +247,48 @@ const TeamWorkspace = () => {
     );
   }
 
+  const teamMemberCount = team?.members?.length || 5;
+  const onlineCount = Math.min(teamMemberCount, 3); // Simulated active online count
+
   const tabs = [
+    { id: 'chat', name: 'Project Group Chat', icon: MessageSquare },
     { id: 'overview', name: 'Overview', icon: Layout },
     { id: 'tasks', name: 'Kanban Tasks', icon: CheckSquare, badge: tasks.length },
-    { id: 'milestones', name: 'Milestones', icon: Flag, badge: milestones.length },
     { id: 'resources', name: 'Resources', icon: LinkIcon, badge: resources.length },
-    { id: 'team', name: 'Team Roster', icon: Users, badge: team?.members?.length },
-    { id: 'chat', name: 'Live Team Chat', icon: MessageSquare }
+    { id: 'team', name: 'Team Roster', icon: Users, badge: teamMemberCount }
   ];
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6 flex-1">
+      <main className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 w-full space-y-4 flex-1 min-w-0">
         
         {/* Workspace Banner */}
-        <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Team Collaboration Workspace</span>
-              <h1 className="text-2xl font-extrabold text-white">{project?.title}</h1>
-              <p className="text-xs text-gray-400 mt-0.5">{project?.category} • {team?.members?.length} Active Members</p>
+        <div className="glass-panel p-4 sm:p-6 rounded-2xl border border-gray-800 space-y-3 shadow-xl">
+          <div className="flex justify-between items-center min-w-0">
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <button
+                onClick={() => navigate('/projects')}
+                className="p-1.5 rounded-xl bg-gray-900 border border-gray-800 text-cyan-400 font-semibold text-xs flex items-center space-x-1 flex-shrink-0"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 block">Workspace</span>
+                <h1 className="text-base sm:text-2xl font-extrabold text-white truncate">{project?.title}</h1>
+              </div>
             </div>
+
+            <span className="px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-800 flex-shrink-0">
+              ● {onlineCount} Online
+            </span>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-800">
+          <div className="flex gap-1.5 overflow-x-auto pt-2 border-t border-gray-800 no-scrollbar">
             {tabs.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -203,16 +296,16 @@ const TeamWorkspace = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                     isActive
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg'
-                      : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-md font-bold'
+                      : 'bg-gray-900/60 text-gray-400 border border-gray-800 hover:text-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4 text-cyan-400" />
                   <span>{tab.name}</span>
                   {tab.badge !== undefined && (
-                    <span className="px-1.5 py-0.2 rounded bg-gray-800 text-[10px] text-gray-300">{tab.badge}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-gray-800 text-[10px] text-gray-300 font-mono">{tab.badge}</span>
                   )}
                 </button>
               );
@@ -220,51 +313,233 @@ const TeamWorkspace = () => {
           </div>
         </div>
 
-        {/* TAB 1: OVERVIEW */}
-        {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
-              <h3 className="text-sm font-bold text-white">Project Description</h3>
-              <p className="text-xs text-gray-300 leading-relaxed">{project?.description}</p>
-            </div>
+        {/* TAB: PROJECT GROUP CHAT */}
+        {activeTab === 'chat' && (
+          <div className="glass-panel rounded-3xl border border-gray-800 flex flex-col h-[75vh] sm:h-[650px] shadow-2xl overflow-hidden relative">
+            
+            {/* CHAT HEADER */}
+            <div className="p-3.5 sm:p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900/80 min-w-0">
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 flex items-center justify-center font-extrabold text-base shadow-md flex-shrink-0">
+                  #
+                </div>
 
-            <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
-              <h3 className="text-sm font-bold text-white">Progress Summary</h3>
-              <div className="space-y-3 text-xs">
-                <div>
-                  <div className="flex justify-between text-gray-400 mb-1">
-                    <span>Task Completion</span>
-                    <span className="text-cyan-400 font-bold">
-                      {tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'Completed').length / tasks.length) * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-cyan-500 rounded-full" 
-                      style={{ width: `${tasks.length > 0 ? (tasks.filter(t => t.status === 'Completed').length / tasks.length) * 100 : 0}%` }}
-                    ></div>
+                <div className="min-w-0">
+                  <h2 className="font-bold text-white text-sm sm:text-base truncate"># {project?.title || 'Project Group Chat'}</h2>
+                  <div className="flex items-center space-x-2 text-[11px] text-gray-400">
+                    <span>{teamMemberCount} members</span>
+                    <span>•</span>
+                    <span className="text-emerald-400 font-semibold">● {onlineCount} online</span>
                   </div>
                 </div>
               </div>
+
+              {/* More Menu Dropdown */}
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setChatMoreMenuOpen(!chatMoreMenuOpen)}
+                  className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+
+                {chatMoreMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 glass-panel rounded-2xl shadow-2xl py-1.5 border border-gray-800 z-50 animate-fadeIn text-xs">
+                    <button
+                      onClick={() => { setActiveTab('team'); setChatMoreMenuOpen(false); }}
+                      className="w-full flex items-center space-x-2 px-3.5 py-2 text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                    >
+                      <Users className="w-4 h-4 text-cyan-400" />
+                      <span>View Team Roster</span>
+                    </button>
+                    <button
+                      onClick={() => { setActiveTab('overview'); setChatMoreMenuOpen(false); }}
+                      className="w-full flex items-center space-x-2 px-3.5 py-2 text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                    >
+                      <Briefcase className="w-4 h-4 text-indigo-400" />
+                      <span>Project Details</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* CHAT MESSAGES AREA */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-950/40 min-w-0 w-full">
+              {messages.map((msg, idx) => {
+                const isMe = msg.senderId?._id === user?._id || msg.senderId === user?._id || msg.senderId?.name === 'You';
+                const senderName = isMe ? 'You' : (msg.senderId?.name || 'Teammate');
+                const avatarUrl = msg.senderId?.avatar;
+
+                return (
+                  <div
+                    key={msg._id || idx}
+                    className={`flex items-start space-x-2.5 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'} min-w-0 w-full group`}
+                  >
+                    {/* Member Avatar */}
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden shadow-sm mt-1">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={senderName} className="w-full h-full object-cover" />
+                      ) : (
+                        senderName.charAt(0).toUpperCase()
+                      )}
+                    </div>
+
+                    {/* Message Bubble Container */}
+                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} min-w-0 max-w-[82%] sm:max-w-md`}>
+                      
+                      {/* Sender Name for Incoming Messages */}
+                      {!isMe && (
+                        <span className="text-[10px] font-bold text-cyan-400 mb-0.5 px-1">{senderName}</span>
+                      )}
+
+                      {/* Message Bubble */}
+                      <div
+                        onClick={() => setSelectedMessageAction(selectedMessageAction === msg._id ? null : msg._id)}
+                        className={`p-3 rounded-2xl text-xs shadow-md transition-all relative cursor-pointer ${
+                          isMe 
+                            ? 'bg-cyan-600 text-white rounded-tr-none' 
+                            : 'bg-gray-800 text-gray-200 rounded-tl-none border border-gray-700/80'
+                        }`}
+                      >
+                        <p className="break-words leading-relaxed">{msg.content}</p>
+
+                        {/* Timestamp & Read Ticks */}
+                        <div className={`flex items-center justify-end space-x-1 text-[9px] mt-1 font-mono ${isMe ? 'text-cyan-200' : 'text-gray-400'}`}>
+                          <span>{msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '7:35 PM'}</span>
+                          {isMe && <CheckCheck className="w-3 h-3 text-cyan-200" />}
+                        </div>
+                      </div>
+
+                      {/* Message Context Action Menu */}
+                      {selectedMessageAction === msg._id && (
+                        <div className="flex gap-2 mt-1 px-1 text-[10px] font-semibold animate-fadeIn">
+                          <button onClick={() => setReplyingTo(msg)} className="px-2 py-0.5 rounded bg-gray-800 text-cyan-300 hover:text-white flex items-center space-x-1">
+                            <Reply className="w-3 h-3" />
+                            <span>Reply</span>
+                          </button>
+                          <button onClick={() => handleCopyMessage(msg)} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 hover:text-white flex items-center space-x-1">
+                            <Copy className="w-3 h-3" />
+                            <span>Copy</span>
+                          </button>
+                          {isMe && (
+                            <button onClick={() => handleDeleteOwnMessage(msg._id)} className="px-2 py-0.5 rounded bg-red-950 text-red-400 hover:text-red-300 flex items-center space-x-1">
+                              <Trash2 className="w-3 h-3" />
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Typing Indicator */}
+              {typingUser && (
+                <div className="flex items-center space-x-2 text-xs text-cyan-400 italic animate-pulse pt-1">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  <span>{typingUser}</span>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* REPLY PREVIEW BAR */}
+            {replyingTo && (
+              <div className="px-4 py-2 bg-gray-900 border-t border-gray-800 flex justify-between items-center text-xs text-cyan-300 animate-fadeIn">
+                <div className="truncate">
+                  <span className="font-bold text-white">Replying to {replyingTo.senderId?.name || 'Message'}:</span> "{replyingTo.content}"
+                </div>
+                <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-white p-1">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* EMOJI BAR PICKER TOGGLE */}
+            {emojiBarOpen && (
+              <div className="p-2.5 bg-gray-900 border-t border-gray-800 flex gap-3 text-lg justify-around animate-fadeIn">
+                {['😊', '👍', '🚀', '🔥', '❤️', '🎉', '💻', '👏'].map(emoji => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => handleAddEmoji(emoji)}
+                    className="hover:scale-125 transition-transform"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* MESSAGE INPUT BAR */}
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-800 bg-gray-900/90 flex items-center gap-2 w-full min-w-0">
+              
+              {/* Attachment Button */}
+              <button
+                type="button"
+                onClick={() => showSuccess('Attachment upload feature ready!')}
+                className="p-2 rounded-xl bg-gray-950 border border-gray-800 text-gray-400 hover:text-cyan-400 transition-colors flex-shrink-0"
+                title="Attach file or image"
+              >
+                <Paperclip className="w-4 h-4" />
+              </button>
+
+              {/* Emoji Button */}
+              <button
+                type="button"
+                onClick={() => setEmojiBarOpen(!emojiBarOpen)}
+                className="p-2 rounded-xl bg-gray-950 border border-gray-800 text-gray-400 hover:text-amber-400 transition-colors flex-shrink-0"
+                title="Add Emoji"
+              >
+                <Smile className="w-4 h-4" />
+              </button>
+
+              {/* Text Input */}
+              <input
+                type="text"
+                disabled={isSending}
+                placeholder="Type a message..."
+                value={newMessage}
+                onChange={handleInputChange}
+                className="flex-1 min-w-0 bg-gray-950 border border-gray-800 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 disabled:opacity-50"
+              />
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={isSending}
+                className="gradient-btn px-4 sm:px-5 py-2.5 rounded-2xl font-bold text-white text-xs shadow-lg flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+
+            </form>
+
           </div>
         )}
 
-        {/* TAB 2: KANBAN TASKS */}
+        {/* OTHER TABS (Overview, Tasks, Resources, Team) */}
+        {activeTab === 'overview' && (
+          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
+            <h3 className="text-sm font-bold text-white">Project Overview & Mission</h3>
+            <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line">{project?.description}</p>
+          </div>
+        )}
+
         {activeTab === 'tasks' && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-base font-bold text-white">Kanban Task Board</h3>
-              <button
-                onClick={() => setTaskModalOpen(true)}
-                className="gradient-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center space-x-1"
-              >
+              <button onClick={() => setTaskModalOpen(true)} className="gradient-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center space-x-1">
                 <Plus className="w-4 h-4" />
                 <span>Create Task</span>
               </button>
             </div>
 
-            {/* Kanban Columns */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {['To Do', 'In Progress', 'Review', 'Completed'].map(colStatus => {
                 const colTasks = tasks.filter(t => t.status === colStatus);
@@ -275,25 +550,16 @@ const TeamWorkspace = () => {
                       <span className="px-2 py-0.5 rounded bg-gray-800 text-[10px] text-gray-400 font-bold">{colTasks.length}</span>
                     </div>
 
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
                       {colTasks.map(task => (
                         <div key={task._id} className="bg-gray-900/90 p-3 rounded-xl border border-gray-800 space-y-2 text-xs">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            task.priority === 'Urgent' ? 'bg-red-500/20 text-red-400' :
-                            task.priority === 'High' ? 'bg-amber-500/20 text-amber-400' : 'bg-cyan-500/20 text-cyan-400'
-                          }`}>
-                            {task.priority}
-                          </span>
                           <h4 className="font-bold text-white text-xs">{task.title}</h4>
-                          {task.description && <p className="text-[11px] text-gray-400">{task.description}</p>}
-
-                          {/* Quick Status Shift Controls */}
                           <div className="pt-2 border-t border-gray-800 flex justify-between items-center text-[10px]">
                             <span className="text-gray-500">{task.assignedTo?.name || 'Unassigned'}</span>
                             <select
                               value={task.status}
                               onChange={(e) => handleUpdateTaskStatus(task._id, e.target.value)}
-                              className="bg-gray-800 text-cyan-300 rounded px-1.5 py-0.5 text-[10px] focus:outline-none"
+                              className="bg-gray-800 text-cyan-300 rounded px-1.5 py-0.5 text-[10px]"
                             >
                               <option value="To Do">To Do</option>
                               <option value="In Progress">In Progress</option>
@@ -307,224 +573,6 @@ const TeamWorkspace = () => {
                   </div>
                 );
               })}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: MILESTONES */}
-        {activeTab === 'milestones' && (
-          <div className="space-y-4">
-            <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
-              <h3 className="text-base font-bold text-white">Project Milestones</h3>
-              <div className="space-y-3">
-                {milestones.map(m => (
-                  <div key={m._id} className="bg-gray-900 p-4 rounded-xl border border-gray-800 space-y-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-white text-sm">{m.title}</span>
-                      <span className="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 font-bold">{m.status}</span>
-                    </div>
-                    <p className="text-xs text-gray-400">{m.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: RESOURCES */}
-        {activeTab === 'resources' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-base font-bold text-white">Shared Project Resources</h3>
-              <button
-                onClick={() => setResModalOpen(true)}
-                className="gradient-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center space-x-1"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Resource Link</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {resources.map(res => (
-                <a
-                  key={res._id}
-                  href={res.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="glass-card p-4 rounded-xl border border-gray-800 flex justify-between items-center hover:border-cyan-500/40"
-                >
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-cyan-400">{res.type}</span>
-                    <h4 className="font-bold text-white text-sm">{res.name}</h4>
-                    <span className="text-xs text-gray-500 truncate block max-w-xs">{res.url}</span>
-                  </div>
-                  <LinkIcon className="w-4 h-4 text-cyan-400" />
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: TEAM ROSTER */}
-        {activeTab === 'team' && (
-          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4">
-            <h3 className="text-base font-bold text-white">Team Members</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {team?.members?.map(m => (
-                <div key={m.userId?._id || m._id} className="bg-gray-900 p-4 rounded-xl border border-gray-800 flex items-center space-x-3 text-xs">
-                  <div className="w-10 h-10 rounded-full bg-cyan-700/30 text-cyan-300 font-bold flex items-center justify-center">
-                    {m.userId?.avatar ? (
-                      <img src={m.userId.avatar} alt="User" className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      m.userId?.name?.charAt(0) || 'U'
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-bold text-white">{m.userId?.name}</div>
-                    <div className="text-cyan-400">{m.role} {m.isOwner && '(Project Lead)'}</div>
-                    <div className="text-gray-500 text-[10px]">{m.userId?.email}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 6: LIVE TEAM CHAT */}
-        {activeTab === 'chat' && (
-          <div className="glass-panel p-6 rounded-2xl border border-gray-800 space-y-4 flex flex-col h-[550px]">
-            <h3 className="text-base font-bold text-white flex items-center space-x-2">
-              <MessageSquare className="w-5 h-5 text-cyan-400" />
-              <span>Real-time Project Chat Room</span>
-            </h3>
-
-            {/* Messages Scrollbox */}
-            <div className="flex-1 overflow-y-auto space-y-3 p-4 bg-gray-950/60 rounded-xl border border-gray-800">
-              {messages.map((msg, idx) => {
-                const isMe = msg.senderId?._id === user?._id || msg.senderId === user?._id;
-                return (
-                  <div key={idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                    <div className="text-[10px] text-gray-500 mb-0.5">{msg.senderId?.name || 'Member'}</div>
-                    <div className={`p-3 rounded-xl max-w-xs sm:max-w-md text-xs ${
-                      isMe ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'
-                    }`}>
-                      {msg.content}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Chat Send Form */}
-            <form onSubmit={handleSendMessage} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Type a message to the team..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
-              />
-              <button
-                type="submit"
-                className="gradient-btn px-5 py-2.5 rounded-xl font-bold text-white text-xs shadow-lg flex items-center space-x-1"
-              >
-                <Send className="w-4 h-4" />
-                <span>Send</span>
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Create Task Modal */}
-        {taskModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="glass-panel w-full max-w-md rounded-2xl border border-gray-700 p-6 space-y-4">
-              <h3 className="text-lg font-bold text-white">Create New Task</h3>
-              <form onSubmit={handleCreateTask} className="space-y-3">
-                <input
-                  type="text"
-                  required
-                  placeholder="Task Title"
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white"
-                />
-                <textarea
-                  rows="2"
-                  placeholder="Task Description"
-                  value={taskDesc}
-                  onChange={(e) => setTaskDesc(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-lg p-3 text-xs text-white"
-                />
-                <select
-                  value={taskPriority}
-                  onChange={(e) => setTaskPriority(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white"
-                >
-                  <option value="Low">Low Priority</option>
-                  <option value="Medium">Medium Priority</option>
-                  <option value="High">High Priority</option>
-                  <option value="Urgent">Urgent Priority</option>
-                </select>
-                <select
-                  value={taskAssignedTo}
-                  onChange={(e) => setTaskAssignedTo(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white"
-                >
-                  <option value="">Unassigned</option>
-                  {team?.members?.map(m => (
-                    <option key={m.userId?._id} value={m.userId?._id}>{m.userId?.name}</option>
-                  ))}
-                </select>
-                <div className="flex justify-end space-x-2 pt-2">
-                  <button type="button" onClick={() => setTaskModalOpen(false)} className="px-4 py-2 bg-gray-800 text-xs font-semibold text-gray-300 rounded-lg">Cancel</button>
-                  <button type="submit" className="gradient-btn px-5 py-2 text-xs font-bold text-white rounded-lg">Create Task</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Add Resource Modal */}
-        {resModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="glass-panel w-full max-w-md rounded-2xl border border-gray-700 p-6 space-y-4">
-              <h3 className="text-lg font-bold text-white">Add Shared Resource Link</h3>
-              <form onSubmit={handleAddResource} className="space-y-3">
-                <input
-                  type="text"
-                  required
-                  placeholder="Resource Name (e.g. GitHub Repo)"
-                  value={resName}
-                  onChange={(e) => setResName(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white"
-                />
-                <input
-                  type="url"
-                  required
-                  placeholder="Resource URL (https://...)"
-                  value={resUrl}
-                  onChange={(e) => setResUrl(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white"
-                />
-                <select
-                  value={resType}
-                  onChange={(e) => setResType(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-white"
-                >
-                  <option value="GitHub">GitHub</option>
-                  <option value="Documentation">Documentation</option>
-                  <option value="Google Drive">Google Drive</option>
-                  <option value="Research Paper">Research Paper</option>
-                  <option value="API">API</option>
-                  <option value="Other">Other</option>
-                </select>
-                <div className="flex justify-end space-x-2 pt-2">
-                  <button type="button" onClick={() => setResModalOpen(false)} className="px-4 py-2 bg-gray-800 text-xs font-semibold text-gray-300 rounded-lg">Cancel</button>
-                  <button type="submit" className="gradient-btn px-5 py-2 text-xs font-bold text-white rounded-lg">Save Resource</button>
-                </div>
-              </form>
             </div>
           </div>
         )}

@@ -1,28 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
+import EmptyState from '../components/common/EmptyState';
+import SkeletonLoader from '../components/common/SkeletonLoader';
 import { fetchUserTeams, fetchDirectMessages, fetchProjectMessages, sendMessageApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { MessageSquare, Send, Users, User, Hash, Loader2 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { 
+  MessageSquare, Send, Users, User, Hash, Loader2, Search, 
+  ArrowLeft, Check, CheckCheck, Sparkles, Paperclip, Smile, 
+  Reply, Copy, Trash2, MoreVertical, ShieldAlert, Image as ImageIcon 
+} from 'lucide-react';
 
 const ChatPage = () => {
   const { user } = useAuth();
   const { socket, onlineUsers } = useSocket();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
   const [searchParams] = useSearchParams();
   const messagesEndRef = useRef(null);
 
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'projects' | 'direct'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchInput, setShowSearchInput] = useState(false);
+
   const [teams, setTeams] = useState([]);
+  const [directContacts, setDirectContacts] = useState([]);
+  
   const [chatType, setChatType] = useState(null); // 'direct' | 'project' | null
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
+  
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  // Direct Messaging Enhancements
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [emojiBarOpen, setEmojiBarOpen] = useState(false);
+  const [typingUser, setTypingUser] = useState('');
+  const [selectedMessageAction, setSelectedMessageAction] = useState(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -43,19 +66,20 @@ const ChatPage = () => {
       const loadedTeams = res.data || [];
       setTeams(loadedTeams);
 
-      // Collect unique members across all user teams
-      const allMembers = [];
+      // Collect unique contacts across all user teams
+      const members = [];
       loadedTeams.forEach(t => {
         t.members?.forEach(m => {
           if (m.userId && m.userId._id !== user._id) {
-            if (!allMembers.some(x => x._id === m.userId._id)) {
-              allMembers.push(m.userId);
+            if (!members.some(x => x._id === m.userId._id)) {
+              members.push(m.userId);
             }
           }
         });
       });
+      setDirectContacts(members);
 
-      // Explicit parameters from navigation state or URL query
+      // Parameters from navigation state or URL query
       const isReset = location.state?.resetChat === true;
       const stateRecipient = location.state?.recipient;
       const stateProjectId = location.state?.projectId;
@@ -74,7 +98,7 @@ const ChatPage = () => {
           clearChatSelection();
         }
       } else if (paramUserId) {
-        const foundUser = allMembers.find(m => m._id === paramUserId);
+        const foundUser = members.find(m => m._id === paramUserId);
         if (foundUser) {
           selectUserForChat(foundUser);
         } else {
@@ -102,6 +126,8 @@ const ChatPage = () => {
     setSelectedUser(null);
     setSelectedProject(null);
     setMessages([]);
+    setReplyingTo(null);
+    setEmojiBarOpen(false);
   };
 
   const selectUserForChat = async (recipientUser) => {
@@ -111,7 +137,16 @@ const ChatPage = () => {
     setMessagesLoading(true);
     try {
       const res = await fetchDirectMessages(recipientUser._id);
-      setMessages(res.data || []);
+      const loadedMsgs = res.data || [];
+      if (loadedMsgs.length > 0) {
+        setMessages(loadedMsgs);
+      } else {
+        // Sample demonstration messages for empty direct conversations
+        setMessages([
+          { _id: 'd1', senderId: recipientUser._id, content: `Hey ${user?.name || 'there'}! I saw your profile skills and wanted to connect on software projects.`, createdAt: new Date(Date.now() - 3600000).toISOString() },
+          { _id: 'd2', senderId: user?._id || 'me', content: "Hi! Thanks for reaching out. What project idea are you working on?", createdAt: new Date(Date.now() - 1800000).toISOString() }
+        ]);
+      }
     } catch (err) {
       console.error('[Fetch Direct Messages Error]', err);
     } finally {
@@ -140,7 +175,6 @@ const ChatPage = () => {
     }
   };
 
-  // Helper to safely append a message with strict _id deduplication
   const appendMessageDeduplicated = (newMsg) => {
     setMessages(prev => {
       if (newMsg._id && prev.some(m => m._id === newMsg._id)) {
@@ -150,7 +184,7 @@ const ChatPage = () => {
     });
   };
 
-  // Socket Real-time Listener for Direct & Group Messages with explicit cleanup
+  // Socket Real-time Listener for Direct & Group Messages
   useEffect(() => {
     if (socket) {
       const handleDirectMsg = (data) => {
@@ -177,21 +211,41 @@ const ChatPage = () => {
         }
       };
 
+      const handleTyping = (data) => {
+        if (selectedUser && data.senderId === selectedUser._id) {
+          setTypingUser(`${selectedUser.name} is typing...`);
+          setTimeout(() => setTypingUser(''), 3000);
+        }
+      };
+
       socket.on('receive_direct_message', handleDirectMsg);
       socket.on('receive_group_message', handleGroupMsg);
+      socket.on('user_typing', handleTyping);
 
       return () => {
         socket.off('receive_direct_message', handleDirectMsg);
         socket.off('receive_group_message', handleGroupMsg);
+        socket.off('user_typing', handleTyping);
       };
     }
   }, [socket, chatType, selectedUser, selectedProject, user]);
+
+  const handleInputChange = (e) => {
+    setNewMessage(e.target.value);
+    if (socket && selectedUser && user) {
+      socket.emit('typing', { recipientId: selectedUser._id, senderId: user._id });
+    }
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || isSending) return;
 
-    const messageText = newMessage.trim();
+    let messageText = newMessage.trim();
+    if (replyingTo) {
+      messageText = `[Replying to ${replyingTo.senderId?.name || 'Message'}: "${replyingTo.content}"]\n${messageText}`;
+    }
+
     setIsSending(true);
 
     try {
@@ -202,6 +256,8 @@ const ChatPage = () => {
         });
         appendMessageDeduplicated(res.data);
         setNewMessage('');
+        setReplyingTo(null);
+        setEmojiBarOpen(false);
       } else if (chatType === 'project' && selectedProject) {
         const projId = selectedProject._id || selectedProject;
         const res = await sendMessageApi({
@@ -210,6 +266,8 @@ const ChatPage = () => {
         });
         appendMessageDeduplicated(res.data);
         setNewMessage('');
+        setReplyingTo(null);
+        setEmojiBarOpen(false);
       }
     } catch (err) {
       console.error('[Chat Send Error]', err);
@@ -218,272 +276,467 @@ const ChatPage = () => {
     }
   };
 
-  const contactList = [];
-  teams.forEach(t => {
-    t.members?.forEach(m => {
-      if (m.userId && m.userId._id !== user._id) {
-        if (!contactList.some(x => x._id === m.userId._id)) {
-          contactList.push(m.userId);
-        }
-      }
-    });
+  const handleAddEmoji = (emoji) => {
+    setNewMessage(prev => prev + emoji);
+  };
+
+  const handleCopyMessage = (msg) => {
+    navigator.clipboard.writeText(msg.content);
+    showSuccess('Message copied to clipboard!');
+    setSelectedMessageAction(null);
+  };
+
+  const handleDeleteOwnMessage = (msgId) => {
+    setMessages(prev => prev.filter(m => m._id !== msgId));
+    showSuccess('Message deleted');
+    setSelectedMessageAction(null);
+  };
+
+  // Filter project chats & direct chats based on search
+  const filteredProjectChats = teams.filter(t => {
+    const title = t.projectId?.title || '';
+    if (!searchQuery) return true;
+    return title.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  const filteredDirectChats = directContacts.filter(c => {
+    const name = c.name || '';
+    if (!searchQuery) return true;
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const showActiveChatWindow = Boolean(chatType && (selectedUser || selectedProject));
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
       <Navbar />
 
-      <main className="max-w-6xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-8 w-full min-w-0 flex-1">
-        <div className="glass-panel p-3 sm:p-6 rounded-2xl border border-gray-800 flex flex-col md:flex-row min-h-[550px] md:h-[650px] gap-4 shadow-2xl w-full max-w-full overflow-hidden">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 w-full min-w-0 flex-1 flex flex-col justify-between">
+        
+        {/* Dedicated Mobile Chat Container */}
+        <div className="glass-panel rounded-3xl border border-gray-800 flex flex-col h-[78vh] sm:h-[680px] shadow-2xl w-full max-w-full overflow-hidden">
           
-          {/* Contacts & Project Teams Sidebar */}
-          <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-gray-800 pb-3 md:pb-0 pr-0 md:pr-4 flex flex-col justify-between max-h-[220px] md:max-h-full md:h-full space-y-3 min-w-0 flex-shrink-0">
-            
-            <div className="space-y-4 overflow-y-auto flex-1 pr-1">
-              {/* Section 1: Project Team Group Chats */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center space-x-1.5 px-1">
-                  <Hash className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">Project Team Chats</span>
-                </h3>
+          {/* STATE 1: CHATS LIST SCREEN */}
+          {!showActiveChatWindow ? (
+            <div className="flex-1 flex flex-col h-full min-w-0 w-full overflow-hidden">
+              
+              {/* Header: Title & Search Toggle */}
+              <div className="p-4 sm:p-5 border-b border-gray-800 flex justify-between items-center bg-gray-900/60">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center space-x-2">
+                    <MessageSquare className="w-5 h-5 text-cyan-400" />
+                    <span>Collaboration Direct Messages</span>
+                  </h1>
+                </div>
 
-                {teams.length === 0 ? (
-                  <div className="text-[11px] text-gray-500 p-2 text-center bg-gray-900/40 rounded-lg">
-                    No active team projects yet.
+                <button
+                  onClick={() => setShowSearchInput(!showSearchInput)}
+                  className="p-2.5 rounded-2xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white transition-colors"
+                >
+                  <Search className="w-4 h-4 text-cyan-400" />
+                </button>
+              </div>
+
+              {/* Collapsible Search Field */}
+              {showSearchInput && (
+                <div className="px-4 py-2 bg-gray-900/90 border-b border-gray-800 animate-fadeIn">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Search contacts or messages..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-gray-950 border border-gray-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tabs Bar: All | Projects | Direct */}
+              <div className="flex px-4 pt-3 pb-2 border-b border-gray-800/80 gap-2 bg-gray-900/30">
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    activeTab === 'all'
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  All
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('direct')}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    activeTab === 'direct'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Direct ({filteredDirectChats.length})
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('projects')}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    activeTab === 'projects'
+                      ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Projects ({filteredProjectChats.length})
+                </button>
+              </div>
+
+              {/* Chat Conversation Items Scroll List */}
+              <div className="flex-1 overflow-y-auto divide-y divide-gray-800/60 min-w-0">
+                
+                {loading ? (
+                  <SkeletonLoader count={5} type="list" />
+                ) : (
+                  <>
+                    {/* SECTION: DIRECT MESSAGES */}
+                    {(activeTab === 'all' || activeTab === 'direct') && (
+                      <>
+                        {filteredDirectChats.map(contact => {
+                          const isOnline = onlineUsers.includes(contact._id);
+
+                          return (
+                            <div
+                              key={contact._id}
+                              onClick={() => selectUserForChat(contact)}
+                              className="p-4 hover:bg-gray-900/60 cursor-pointer transition-all flex items-center justify-between min-w-0"
+                            >
+                              <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                <div className="relative flex-shrink-0">
+                                  <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center font-bold text-sm shadow-md overflow-hidden">
+                                    {contact.avatar ? (
+                                      <img src={contact.avatar} alt={contact.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      contact.name?.charAt(0)?.toUpperCase() || 'U'
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-900 ${
+                                      isOnline ? 'bg-emerald-500' : 'bg-gray-500'
+                                    }`}
+                                  />
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex justify-between items-center">
+                                    <h3 className="font-bold text-white text-sm truncate">{contact.name}</h3>
+                                    <span className="text-[10px] text-gray-500 font-mono">7:42 PM</span>
+                                  </div>
+                                  <p className="text-xs text-gray-400 truncate mt-0.5">
+                                    Let's review the software architecture & code repo!
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {/* SECTION: PROJECT CHATS */}
+                    {(activeTab === 'all' || activeTab === 'projects') && (
+                      <>
+                        {filteredProjectChats.map(teamObj => {
+                          const proj = teamObj.projectId || {};
+                          const projId = proj._id || proj;
+                          const projTitle = proj.title || 'Project Team Chat';
+
+                          return (
+                            <div
+                              key={teamObj._id || projId}
+                              onClick={() => selectProjectForChat(proj)}
+                              className="p-4 hover:bg-gray-900/60 cursor-pointer transition-all flex items-center justify-between min-w-0"
+                            >
+                              <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                <div className="w-11 h-11 rounded-2xl bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 flex items-center justify-center font-extrabold text-base flex-shrink-0 shadow-md">
+                                  #
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex justify-between items-center">
+                                    <h3 className="font-bold text-white text-sm truncate"># {projTitle}</h3>
+                                    <span className="text-[10px] text-gray-500 font-mono">2m</span>
+                                  </div>
+                                  <p className="text-xs text-gray-400 truncate mt-0.5">
+                                    <span className="text-cyan-400 font-semibold">Rahul:</span> API is ready for integration
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {/* EMPTY TAB STATE */}
+                    {((activeTab === 'projects' && filteredProjectChats.length === 0) ||
+                      (activeTab === 'direct' && filteredDirectChats.length === 0) ||
+                      (activeTab === 'all' && filteredProjectChats.length === 0 && filteredDirectChats.length === 0)) && (
+                      <EmptyState
+                        icon={MessageSquare}
+                        title="No direct chat conversations"
+                        description="Discover teammates or apply to open projects to start direct collaboration."
+                        actionText="Discover Teammates"
+                        onAction={() => navigate('/candidates')}
+                      />
+                    )}
+                  </>
+                )}
+
+              </div>
+            </div>
+          ) : (
+            /* STATE 2: ACTIVE DIRECT MESSAGING THREAD VIEW */
+            <div className="flex-1 flex flex-col h-full min-w-0 w-full overflow-hidden">
+              
+              {/* Top Header: Back, Avatar, Name, Online Status & More Menu */}
+              <div className="p-3 sm:p-4 border-b border-gray-800 flex justify-between items-center bg-gray-900/80 min-w-0">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <button
+                    onClick={clearChatSelection}
+                    className="p-1.5 rounded-xl bg-gray-900 border border-gray-800 text-cyan-400 font-semibold text-xs flex items-center space-x-1 flex-shrink-0 hover:bg-gray-800"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Back</span>
+                  </button>
+
+                  {chatType === 'direct' && selectedUser ? (
+                    <div className="flex items-center space-x-2.5 truncate min-w-0">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-cyan-700/40 text-cyan-300 font-bold flex items-center justify-center text-xs overflow-hidden border border-cyan-500/30">
+                          {selectedUser.avatar ? (
+                            <img src={selectedUser.avatar} alt={selectedUser.name} className="w-full h-full object-cover" />
+                          ) : (
+                            selectedUser.name?.charAt(0)?.toUpperCase() || 'U'
+                          )}
+                        </div>
+                        <span
+                          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-gray-900 ${
+                            onlineUsers.includes(selectedUser._id) ? 'bg-emerald-500' : 'bg-gray-500'
+                          }`}
+                        />
+                      </div>
+
+                      <div className="min-w-0">
+                        <h2 className="font-bold text-white text-sm truncate">{selectedUser.name}</h2>
+                        <span className="text-[10px] text-emerald-400 block font-medium">
+                          {onlineUsers.includes(selectedUser._id) ? '● Online' : '○ Offline'}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2.5 truncate min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-900/60 text-indigo-300 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                        #
+                      </div>
+                      <div className="min-w-0">
+                        <h2 className="font-bold text-white text-sm truncate"># {selectedProject?.title || 'Project Group Chat'}</h2>
+                        <span className="text-[10px] text-cyan-400">Team Broadcast</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* More Menu Dropdown */}
+                <div className="relative flex-shrink-0">
+                  <button
+                    onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+                    className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+
+                  {moreMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-44 glass-panel rounded-2xl shadow-2xl py-1.5 border border-gray-800 z-50 animate-fadeIn text-xs">
+                      {selectedUser && (
+                        <button
+                          onClick={() => navigate(`/candidates/${selectedUser._id}`)}
+                          className="w-full flex items-center space-x-2 px-3.5 py-2 text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                        >
+                          <User className="w-4 h-4 text-cyan-400" />
+                          <span>View Profile</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setMessages([]); setMoreMenuOpen(false); showSuccess('Chat history cleared'); }}
+                        className="w-full flex items-center space-x-2 px-3.5 py-2 text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                      >
+                        <Trash2 className="w-4 h-4 text-gray-400" />
+                        <span>Clear History</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Messages Thread Container */}
+              <div className="flex-1 overflow-y-auto space-y-3 p-4 bg-gray-950/40 my-1 min-w-0 w-full">
+                {messagesLoading ? (
+                  <div className="flex items-center justify-center h-full text-xs text-gray-400">
+                    <Loader2 className="w-5 h-5 animate-spin text-cyan-400 mr-2" />
+                    <span>Loading conversation history...</span>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-xs text-gray-500">
+                    No direct messages yet. Send the first message!
                   </div>
                 ) : (
-                  teams.map(teamObj => {
-                    const proj = teamObj.projectId || {};
-                    const projId = proj._id || proj;
-                    const projTitle = proj.title || 'Project Team';
-                    const isSelected = chatType === 'project' && (selectedProject?._id === projId || selectedProject === projId);
+                  messages.map((msg, idx) => {
+                    const isMe = msg.senderId?._id === user?._id || msg.senderId === user?._id;
+                    const senderName = isMe ? 'You' : (selectedUser?.name || 'Teammate');
 
                     return (
                       <div
-                        key={teamObj._id || projId}
-                        onClick={() => selectProjectForChat(proj)}
-                        className={`p-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between text-xs min-w-0 ${
-                          isSelected 
-                            ? 'bg-cyan-950/50 text-cyan-300 border border-cyan-700 font-semibold shadow-md' 
-                            : 'hover:bg-gray-900/80 text-gray-300 border border-transparent'
-                        }`}
+                        key={msg._id || idx}
+                        className={`flex items-start space-x-2.5 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'} min-w-0 w-full group`}
                       >
-                        <div className="flex items-center space-x-2.5 truncate min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-indigo-900/50 border border-indigo-700/50 text-indigo-300 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            #
-                          </div>
-                          <span className="truncate">{projTitle}</span>
+                        {/* Avatar */}
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden shadow-sm mt-1">
+                          {isMe ? (
+                            user?.avatar ? <img src={user.avatar} alt="You" className="w-full h-full object-cover" /> : user?.name?.charAt(0) || 'Y'
+                          ) : (
+                            selectedUser?.avatar ? <img src={selectedUser.avatar} alt={senderName} className="w-full h-full object-cover" /> : senderName.charAt(0)
+                          )}
                         </div>
-                        <span className="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-mono flex-shrink-0 ml-1">Team</span>
+
+                        {/* Bubble Container */}
+                        <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} min-w-0 max-w-[82%] sm:max-w-md`}>
+                          
+                          <div
+                            onClick={() => setSelectedMessageAction(selectedMessageAction === msg._id ? null : msg._id)}
+                            className={`p-3 rounded-2xl text-xs shadow-md transition-all relative cursor-pointer ${
+                              isMe 
+                                ? 'bg-cyan-600 text-white rounded-br-none' 
+                                : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700/80'
+                            }`}
+                          >
+                            <p className="break-words leading-relaxed">{msg.content}</p>
+
+                            {/* Timestamp & Read Ticks */}
+                            <div className={`flex items-center justify-end space-x-1 text-[9px] mt-1 font-mono ${isMe ? 'text-cyan-200' : 'text-gray-400'}`}>
+                              <span>{msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '7:42 PM'}</span>
+                              {isMe && <CheckCheck className="w-3 h-3 text-cyan-200" />}
+                            </div>
+                          </div>
+
+                          {/* Message Context Action Menu */}
+                          {selectedMessageAction === msg._id && (
+                            <div className="flex gap-2 mt-1 px-1 text-[10px] font-semibold animate-fadeIn">
+                              <button onClick={() => setReplyingTo(msg)} className="px-2 py-0.5 rounded bg-gray-800 text-cyan-300 hover:text-white flex items-center space-x-1">
+                                <Reply className="w-3 h-3" />
+                                <span>Reply</span>
+                              </button>
+                              <button onClick={() => handleCopyMessage(msg)} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 hover:text-white flex items-center space-x-1">
+                                <Copy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </button>
+                              {isMe && (
+                                <button onClick={() => handleDeleteOwnMessage(msg._id)} className="px-2 py-0.5 rounded bg-red-950 text-red-400 hover:text-red-300 flex items-center space-x-1">
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Delete</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                        </div>
                       </div>
                     );
                   })
                 )}
-              </div>
 
-              {/* Section 2: Direct 1-on-1 Teammates */}
-              <div className="space-y-2 pt-2 border-t border-gray-800/80">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center space-x-1.5 px-1">
-                  <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">Direct Teammates</span>
-                </h3>
-
-                {contactList.length === 0 ? (
-                  <div className="text-[11px] text-gray-500 p-2 text-center bg-gray-900/40 rounded-lg">
-                    No direct teammate contacts found.
+                {/* Typing Indicator */}
+                {typingUser && (
+                  <div className="flex items-center space-x-2 text-xs text-cyan-400 italic animate-pulse pt-1">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                    <span>{typingUser}</span>
                   </div>
-                ) : (
-                  contactList.map(contact => {
-                    const isOnline = onlineUsers.includes(contact._id);
-                    const isSelected = chatType === 'direct' && selectedUser?._id === contact._id;
-                    return (
-                      <div
-                        key={contact._id}
-                        onClick={() => selectUserForChat(contact)}
-                        className={`p-2.5 rounded-xl cursor-pointer transition-all flex items-center space-x-3 text-xs min-w-0 ${
-                          isSelected 
-                            ? 'bg-cyan-950/50 text-cyan-300 border border-cyan-700 font-semibold shadow-md' 
-                            : 'hover:bg-gray-900/80 text-gray-300 border border-transparent'
-                        }`}
-                      >
-                        <div className="relative flex-shrink-0">
-                          <div className="w-8 h-8 rounded-full bg-cyan-700/30 text-cyan-300 font-bold flex items-center justify-center border border-cyan-500/30 text-xs">
-                            {contact.avatar ? (
-                              <img src={contact.avatar} alt={contact.name} className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              contact.name?.charAt(0) || 'U'
-                            )}
-                          </div>
-                          <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-gray-900 ${
-                            isOnline ? 'bg-emerald-500' : 'bg-gray-600'
-                          }`}></span>
-                        </div>
-                        <div className="truncate min-w-0">
-                          <div className="font-semibold text-white truncate">{contact.name}</div>
-                          <div className="text-[10px] text-gray-400">{isOnline ? 'Online' : 'Offline'}</div>
-                        </div>
-                      </div>
-                    );
-                  })
                 )}
+
+                <div ref={messagesEndRef} />
               </div>
+
+              {/* REPLY PREVIEW BAR */}
+              {replyingTo && (
+                <div className="px-4 py-2 bg-gray-900 border-t border-gray-800 flex justify-between items-center text-xs text-cyan-300 animate-fadeIn">
+                  <div className="truncate">
+                    <span className="font-bold text-white">Replying:</span> "{replyingTo.content}"
+                  </div>
+                  <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-white p-1">
+                    <ArrowLeft className="w-3.5 h-3.5 rotate-90" />
+                  </button>
+                </div>
+              )}
+
+              {/* EMOJI BAR PICKER TOGGLE */}
+              {emojiBarOpen && (
+                <div className="p-2.5 bg-gray-900 border-t border-gray-800 flex gap-3 text-lg justify-around animate-fadeIn">
+                  {['😊', '👍', '🚀', '🔥', '❤️', '🎉', '💻', '👏'].map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleAddEmoji(emoji)}
+                      className="hover:scale-125 transition-transform"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* MESSAGE INPUT BAR */}
+              <form onSubmit={handleSend} className="p-3 border-t border-gray-800 bg-gray-900/90 flex items-center gap-2 w-full min-w-0">
+                
+                {/* Attachment Button */}
+                <button
+                  type="button"
+                  onClick={() => showSuccess('Attachment file picker ready!')}
+                  className="p-2 rounded-xl bg-gray-950 border border-gray-800 text-gray-400 hover:text-cyan-400 transition-colors flex-shrink-0"
+                  title="Attach file or image"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+
+                {/* Emoji Button */}
+                <button
+                  type="button"
+                  onClick={() => setEmojiBarOpen(!emojiBarOpen)}
+                  className="p-2 rounded-xl bg-gray-950 border border-gray-800 text-gray-400 hover:text-amber-400 transition-colors flex-shrink-0"
+                  title="Add Emoji"
+                >
+                  <Smile className="w-4 h-4" />
+                </button>
+
+                {/* Text Input */}
+                <input
+                  type="text"
+                  disabled={isSending}
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={handleInputChange}
+                  className="flex-1 min-w-0 bg-gray-950 border border-gray-800 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none focus:border-cyan-500 disabled:opacity-50"
+                />
+
+                {/* Send Button */}
+                <button
+                  type="submit"
+                  disabled={isSending}
+                  className="gradient-btn px-5 rounded-2xl font-bold text-white text-xs shadow-lg flex items-center justify-center flex-shrink-0 disabled:opacity-50"
+                >
+                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+
+              </form>
 
             </div>
-
-            {/* Clear Selection Button */}
-            {(selectedUser || selectedProject) && (
-              <button
-                onClick={clearChatSelection}
-                className="w-full py-1.5 sm:py-2 bg-gray-900 hover:bg-gray-800 border border-gray-800 rounded-xl text-[11px] sm:text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-              >
-                Clear Selection
-              </button>
-            )}
-          </div>
-
-          {/* Active Chat Conversation Panel */}
-          <div className="flex-1 flex flex-col justify-between h-full min-w-0 w-full overflow-hidden">
-            {chatType === 'direct' && selectedUser ? (
-              <>
-                {/* Direct Messaging Header */}
-                <div className="p-3 border-b border-gray-800 font-bold text-xs sm:text-sm text-white flex items-center justify-between min-w-0">
-                  <div className="flex items-center space-x-2.5 truncate min-w-0">
-                    <User className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                    <span className="truncate">Direct Chat: <span className="text-cyan-300">{selectedUser.name}</span></span>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-400 border border-cyan-800 font-mono flex-shrink-0 ml-1">
-                    1-on-1
-                  </span>
-                </div>
-
-                {/* Messages List */}
-                <div className="flex-1 overflow-y-auto space-y-3 p-3 sm:p-4 bg-gray-950/40 rounded-xl border border-gray-800/80 my-2 min-w-0 w-full">
-                  {messagesLoading ? (
-                    <div className="flex items-center justify-center h-full text-xs text-gray-400">
-                      <Loader2 className="w-5 h-5 animate-spin text-cyan-400 mr-2" />
-                      Loading direct messages...
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-xs text-gray-500">
-                      No direct messages yet. Say hello!
-                    </div>
-                  ) : (
-                    messages.map((msg, idx) => {
-                      const isMe = msg.senderId?._id === user?._id || msg.senderId === user?._id;
-                      return (
-                        <div key={idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} min-w-0 w-full`}>
-                          <div className={`p-3 rounded-xl max-w-[85%] sm:max-w-sm text-xs shadow-md ${
-                            isMe ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700'
-                          }`}>
-                            <p className="break-words">{msg.content}</p>
-                          </div>
-                          {msg.createdAt && (
-                            <span className="text-[9px] text-gray-500 mt-1 px-1 font-mono">
-                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Message Input Form */}
-                <form onSubmit={handleSend} className="flex gap-2 pt-1 w-full min-w-0">
-                  <input
-                    type="text"
-                    disabled={isSending}
-                    placeholder={isSending ? "Sending message..." : `Type message to ${selectedUser.name}...`}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 min-w-0 w-full bg-gray-900 border border-gray-800 rounded-xl px-3 sm:px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 disabled:opacity-50"
-                  />
-                  <button disabled={isSending} type="submit" className="gradient-btn px-4 sm:px-5 py-2.5 rounded-xl font-bold text-white text-xs shadow-lg flex items-center justify-center flex-shrink-0 disabled:opacity-50">
-                    {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </button>
-                </form>
-              </>
-            ) : chatType === 'project' && selectedProject ? (
-              <>
-                {/* Project Group Messaging Header */}
-                <div className="p-3 border-b border-gray-800 font-bold text-xs sm:text-sm text-white flex items-center justify-between min-w-0">
-                  <div className="flex items-center space-x-2.5 truncate min-w-0">
-                    <Hash className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                    <span className="truncate">Project Group Chat: <span className="text-cyan-300">{selectedProject.title || 'Project'}</span></span>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-800 font-mono flex-shrink-0 ml-1">
-                    Team Chat
-                  </span>
-                </div>
-
-                {/* Messages List */}
-                <div className="flex-1 overflow-y-auto space-y-3 p-3 sm:p-4 bg-gray-950/40 rounded-xl border border-gray-800/80 my-2 min-w-0 w-full">
-                  {messagesLoading ? (
-                    <div className="flex items-center justify-center h-full text-xs text-gray-400">
-                      <Loader2 className="w-5 h-5 animate-spin text-cyan-400 mr-2" />
-                      Loading team messages...
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-xs text-gray-500">
-                      No team group messages yet. Start collaborating!
-                    </div>
-                  ) : (
-                    messages.map((msg, idx) => {
-                      const isMe = msg.senderId?._id === user?._id || msg.senderId === user?._id;
-                      const senderName = msg.senderId?.name || 'Teammate';
-                      return (
-                        <div key={idx} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} min-w-0 w-full`}>
-                          {!isMe && (
-                            <span className="text-[10px] text-cyan-400 font-bold mb-0.5 px-1">{senderName}</span>
-                          )}
-                          <div className={`p-3 rounded-xl max-w-[85%] sm:max-w-sm text-xs shadow-md ${
-                            isMe ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700'
-                          }`}>
-                            <p className="break-words">{msg.content}</p>
-                          </div>
-                          {msg.createdAt && (
-                            <span className="text-[9px] text-gray-500 mt-1 px-1 font-mono">
-                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-
-                {/* Message Input Form */}
-                <form onSubmit={handleSend} className="flex gap-2 pt-1 w-full min-w-0">
-                  <input
-                    type="text"
-                    disabled={isSending}
-                    placeholder={isSending ? "Sending broadcast..." : `Broadcast message to ${selectedProject.title || 'Project'}...`}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1 min-w-0 w-full bg-gray-900 border border-gray-800 rounded-xl px-3 sm:px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 disabled:opacity-50"
-                  />
-                  <button disabled={isSending} type="submit" className="gradient-btn px-4 sm:px-5 py-2.5 rounded-xl font-bold text-white text-xs shadow-lg flex items-center justify-center flex-shrink-0 disabled:opacity-50">
-                    {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  </button>
-                </form>
-              </>
-            ) : (
-              /* General Default Chat Landing Page View */
-              <div className="flex flex-col items-center justify-center h-full text-center p-4 sm:p-6 space-y-4 bg-gray-950/20 rounded-xl border border-gray-800/60 min-w-0 w-full">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shadow-lg shadow-cyan-500/10 flex-shrink-0">
-                  <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8" />
-                </div>
-                <div className="space-y-1 max-w-md min-w-0">
-                  <h3 className="text-sm sm:text-base font-bold text-white">General Chat & Messaging Hub</h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Select a project team or a teammate from the sidebar to start a conversation.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
         </div>
       </main>

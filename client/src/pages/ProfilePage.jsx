@@ -125,7 +125,7 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full min-w-0 flex-1 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 pb-36 md:pb-12 pb-[calc(9rem+env(safe-area-inset-bottom))] w-full min-w-0 flex-1 space-y-6">
         
         {/* Top Header */}
         <div className="flex justify-between items-center border-b border-gray-800 pb-4 min-w-0">
@@ -481,12 +481,12 @@ const ProfilePage = () => {
               </div>
 
               {/* SAVE BUTTON */}
-              <div className="pt-4 border-t border-gray-800 flex justify-end">
+              <div className="pt-6 border-t border-gray-800 flex justify-end w-full">
                 <button
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="gradient-btn px-8 py-3 rounded-2xl text-xs font-bold text-white shadow-xl flex items-center space-x-2 disabled:opacity-50 transition-transform hover:scale-105"
+                  className="gradient-btn w-full sm:w-auto px-8 py-3.5 rounded-2xl text-xs sm:text-sm font-bold text-white shadow-xl flex items-center justify-center space-x-2 disabled:opacity-50 transition-transform hover:scale-105"
                 >
                   <Check className="w-4 h-4" />
                   <span>{saving ? 'Saving Changes...' : 'Save Changes'}</span>

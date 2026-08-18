@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { fetchNotifications } from '../../services/api';
 import AppLogo from './AppLogo';
 import { 
   Briefcase, Users, FileText, Bell, MessageSquare, 
-  Sparkles, LogOut, User, Menu, X, PlusCircle, Settings, Home, Compass, HelpCircle, ChevronRight 
+  Sparkles, LogOut, User, Menu, X, PlusCircle, Settings, Home, Compass, HelpCircle, ChevronRight, Sun, Moon, Monitor 
 } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { socket } = useSocket();
   const location = useLocation();
   const navRef = useRef(null);
@@ -223,8 +225,8 @@ const Navbar = () => {
             </div>
 
             {/* DRAWER MENU ITEMS */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-1 divide-y divide-gray-800/40">
-              <div className="space-y-1 pb-2">
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 divide-y divide-gray-800/40">
+              <div className="space-y-1 pb-1">
                 {mobileMenuItems.map(item => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.path;
@@ -255,6 +257,35 @@ const Navbar = () => {
                     </Link>
                   );
                 })}
+              </div>
+
+              {/* PREFERENCES & THEME CONTROL */}
+              <div className="pt-3 space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block px-1">Preferences & Theme</span>
+                <div className="p-2 rounded-2xl bg-gray-950 border border-gray-800 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-300 flex items-center space-x-2">
+                    <Sun className="w-4 h-4 text-cyan-400" />
+                    <span>Appearance</span>
+                  </span>
+                  <div className="flex gap-1 bg-gray-900 p-1 rounded-xl border border-gray-800">
+                    <button
+                      onClick={() => setTheme('dark')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        theme === 'dark' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-gray-400'
+                      }`}
+                    >
+                      Dark
+                    </button>
+                    <button
+                      onClick={() => setTheme('light')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        theme === 'light' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-gray-400'
+                      }`}
+                    >
+                      Light
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 

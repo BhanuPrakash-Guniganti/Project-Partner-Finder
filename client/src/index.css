@@ -235,12 +235,6 @@ html.light .shadow-2xl {
   box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Ensure Button Text Contrast in Light Theme */
-html.light .gradient-btn,
-html.light .gradient-btn * {
-  color: #ffffff !important;
-}
-
 /* Custom Gradients */
 .gradient-text {
   background: linear-gradient(135deg, #0284c7 0%, #4f46e5 50%, #7c3aed 100%);
@@ -256,6 +250,49 @@ html.light .gradient-btn * {
 .gradient-btn:hover {
   background: linear-gradient(135deg, #0369a1 0%, #4338ca 100%);
   box-shadow: 0 4px 20px -2px rgba(79, 70, 229, 0.4);
+}
+
+/* Keyframes for Mobile Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideRight {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slideRight {
+  animation: slideRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Hide Scrollbar Utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Touch Accessibility */
+button, a, input, select, textarea {
+  touch-action: manipulation;
 }
 
 /* Custom Scrollbar */

@@ -4,7 +4,6 @@ let io;
 // Multi-connection tracking: Map<userIdString, Set<socketId>>
 const userSocketsMap = new Map();
 
-// Helper to normalize any ID (String, ObjectId, or populated Object) into a clean string
 const normalizeId = (id) => {
   if (!id) return null;
   if (typeof id === 'string') return id;
@@ -29,7 +28,7 @@ const removeSocketForUser = (userId, socketId) => {
   sockets.delete(socketId);
   if (sockets.size === 0) {
     userSocketsMap.delete(cleanUserId);
-    return true; // User has no remaining active socket connections
+    return true;
   }
   return false;
 };
@@ -39,7 +38,7 @@ const getOnlineUserIds = () => Array.from(userSocketsMap.keys());
 const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || ['http://localhost:5173', 'http://127.0.0.1:5173'],
+      origin: process.env.CLIENT_URL || ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
       methods: ['GET', 'POST'],
       credentials: true
     }
@@ -87,6 +86,27 @@ const initSocket = (server) => {
         const room = `project_${projectId}`;
         socket.leave(room);
         console.log(`[Socket.IO] Socket ${socket.id} left room ${room}`);
+      }
+    });
+
+    // Typing Indicators
+    socket.on('typing', (data) => {
+      if (data.projectId) {
+        const room = `project_${normalizeId(data.projectId)}`;
+        socket.to(room).emit('user_typing', data);
+      } else if (data.recipientId) {
+        const room = `user_${normalizeId(data.recipientId)}`;
+        socket.to(room).emit('user_typing', data);
+      }
+    });
+
+    socket.on('stop_typing', (data) => {
+      if (data.projectId) {
+        const room = `project_${normalizeId(data.projectId)}`;
+        socket.to(room).emit('user_stop_typing', data);
+      } else if (data.recipientId) {
+        const room = `user_${normalizeId(data.recipientId)}`;
+        socket.to(room).emit('user_stop_typing', data);
       }
     });
 

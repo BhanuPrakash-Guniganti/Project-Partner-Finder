@@ -137,16 +137,7 @@ const ChatPage = () => {
     setMessagesLoading(true);
     try {
       const res = await fetchDirectMessages(recipientUser._id);
-      const loadedMsgs = res.data || [];
-      if (loadedMsgs.length > 0) {
-        setMessages(loadedMsgs);
-      } else {
-        // Sample demonstration messages for empty direct conversations
-        setMessages([
-          { _id: 'd1', senderId: recipientUser._id, content: `Hey ${user?.name || 'there'}! I saw your profile skills and wanted to connect on software projects.`, createdAt: new Date(Date.now() - 3600000).toISOString() },
-          { _id: 'd2', senderId: user?._id || 'me', content: "Hi! Thanks for reaching out. What project idea are you working on?", createdAt: new Date(Date.now() - 1800000).toISOString() }
-        ]);
-      }
+      setMessages(res.data || []);
     } catch (err) {
       console.error('[Fetch Direct Messages Error]', err);
     } finally {
@@ -465,7 +456,7 @@ const ChatPage = () => {
                                     <span className="text-[10px] text-gray-500 font-mono">2m</span>
                                   </div>
                                   <p className="text-xs text-gray-400 truncate mt-0.5">
-                                    <span className="text-cyan-400 font-semibold">Rahul:</span> API is ready for integration
+                                    Project Team Broadcast
                                   </p>
                                 </div>
                               </div>

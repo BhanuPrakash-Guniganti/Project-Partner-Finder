@@ -16,10 +16,13 @@ const Navbar = () => {
   const { theme, setTheme } = useTheme();
   const { socket } = useSocket();
   const location = useLocation();
+  const navigate = useNavigate();
   const navRef = useRef(null);
+  const profileMenuRef = useRef(null);
 
-  // Single clear state for mobile navigation drawer
+  // Single clear state for mobile navigation drawer & desktop profile dropdown
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [mounted, setMounted] = useState(false);
 
@@ -39,10 +42,32 @@ const Navbar = () => {
     };
   }, [isMobileMenuOpen]);
 
-  // Close drawer automatically when route changes
+  // Close menus automatically when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setProfileDropdownOpen(false);
   }, [location.pathname]);
+
+  // Handle outside click to close profile dropdown
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    if (profileDropdownOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [profileDropdownOpen]);
+
+  const handleLogout = () => {
+    setProfileDropdownOpen(false);
+    logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
     if (user) {
@@ -335,19 +360,65 @@ const Navbar = () => {
                   )}
                 </Link>
 
-                {/* Profile Circle Avatar */}
-                <Link
-                  to="/profile"
-                  className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/50 text-white flex items-center justify-center font-bold text-xs shadow-md overflow-hidden flex-shrink-0"
-                  aria-label="View profile"
-                  title="Profile"
-                >
-                  {user.avatar ? (
-                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    user.name?.charAt(0)?.toUpperCase() || 'U'
+                {/* Profile Circle Avatar with Dropdown */}
+                <div ref={profileMenuRef} className="relative flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                    className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/50 text-white flex items-center justify-center font-bold text-xs shadow-md overflow-hidden flex-shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+                    aria-label="Account menu"
+                    aria-expanded={profileDropdownOpen}
+                    title="Account"
+                  >
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user.name?.charAt(0)?.toUpperCase() || 'U'
+                    )}
+                  </button>
+
+                  {profileDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-52 glass-panel rounded-2xl shadow-2xl py-2 border border-gray-800 z-50 animate-fadeIn divide-y divide-gray-800/60 bg-[#0b0f19]/95 backdrop-blur-xl">
+                      {/* User Info Header */}
+                      <div className="px-4 py-2 space-y-0.5">
+                        <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                        <p className="text-[10px] text-cyan-400 truncate">{user.email || user.role || 'Developer'}</p>
+                      </div>
+
+                      {/* Menu Actions */}
+                      <div className="py-1">
+                        <Link
+                          to="/profile"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center space-x-2.5 px-4 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"
+                        >
+                          <User className="w-4 h-4 text-cyan-400" />
+                          <span>Profile</span>
+                        </Link>
+                        <Link
+                          to="/settings"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center space-x-2.5 px-4 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 transition-colors"
+                        >
+                          <Settings className="w-4 h-4 text-indigo-400" />
+                          <span>Settings</span>
+                        </Link>
+                      </div>
+
+                      {/* Logout Action */}
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="w-full flex items-center space-x-2.5 px-4 py-2 text-xs text-red-400 hover:bg-red-950/30 transition-colors text-left cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4 text-red-400" />
+                          <span>Logout</span>
+                        </button>
+                      </div>
+                    </div>
                   )}
-                </Link>
+                </div>
               </>
             ) : (
               <div className="flex items-center space-x-2 flex-shrink-0">

@@ -22,27 +22,16 @@ const ProjectChatDetailsModal = ({ isOpen, onClose, project, team, onOpenInvite,
   const ownerId = project.ownerId?._id || project.ownerId;
   const isOwner = user && ownerId === user._id;
 
-  const members = team?.members || [
-    { userId: { _id: 'u1', name: 'Rahul', avatar: '' }, role: 'Team Lead', isOwner: true },
-    { userId: { _id: 'u2', name: 'Bhanu', avatar: '' }, role: 'Full Stack Developer' },
-    { userId: { _id: 'u3', name: 'Priya', avatar: '' }, role: 'UI/UX Designer' }
-  ];
+  const members = team?.members || [];
 
-  const sharedFiles = [
-    { name: 'architecture_diagram.pdf', size: '2.4 MB', date: 'Yesterday' },
-    { name: 'ui_design_mockups.fig', size: '14.8 MB', date: '3 days ago' },
-    { name: 'api_endpoints_spec.json', size: '120 KB', date: 'Last week' }
-  ];
+  const sharedFiles = [];
 
   const sharedLinks = [
-    { label: 'GitHub Repository', url: project.githubUrl || 'https://github.com/project-partner-finder' },
-    { label: 'Figma Design System', url: project.referenceUrl || 'https://figma.com/file/project-mockups' }
+    ...(project.githubUrl ? [{ label: 'GitHub Repository', url: project.githubUrl }] : []),
+    ...(project.referenceUrl ? [{ label: 'Reference / Design Link', url: project.referenceUrl }] : [])
   ];
 
-  const pinnedMessages = [
-    { author: 'Rahul (Team Lead)', content: '📌 Team Sync every Tuesday at 6:00 PM EST via WebSockets' },
-    { author: 'Priya (UI/UX)', content: '📌 Figma component library updated for dark mode compliance' }
-  ];
+  const pinnedMessages = [];
 
   const handleConfirmLeave = () => {
     showSuccess(`You have left ${project.title}`);
@@ -173,49 +162,67 @@ const ProjectChatDetailsModal = ({ isOpen, onClose, project, team, onOpenInvite,
 
           {activeTab === 'overview' && (
             <div className="space-y-2">
-              {sharedLinks.map((link, idx) => (
-                <a
-                  key={idx}
-                  href={link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-2.5 rounded-xl bg-gray-900/90 border border-gray-800 flex justify-between items-center text-xs hover:border-cyan-500/40 transition-colors"
-                >
-                  <div className="flex items-center space-x-2 truncate">
-                    <LinkIcon className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                    <span className="font-bold text-white truncate">{link.label}</span>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-                </a>
-              ))}
+              {sharedLinks.length === 0 ? (
+                <div className="p-4 text-center text-xs text-gray-500 bg-gray-900/40 rounded-xl border border-gray-800">
+                  No shared project links added yet.
+                </div>
+              ) : (
+                sharedLinks.map((link, idx) => (
+                  <a
+                    key={idx}
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2.5 rounded-xl bg-gray-900/90 border border-gray-800 flex justify-between items-center text-xs hover:border-cyan-500/40 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2 truncate">
+                      <LinkIcon className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                      <span className="font-bold text-white truncate">{link.label}</span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                  </a>
+                ))
+              )}
             </div>
           )}
 
           {activeTab === 'files' && (
             <div className="space-y-2">
-              {sharedFiles.map((file, idx) => (
-                <div key={idx} className="p-2.5 rounded-xl bg-gray-900/90 border border-gray-800 flex justify-between items-center text-xs">
-                  <div className="flex items-center space-x-2 truncate">
-                    <FileText className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                    <div>
-                      <div className="font-bold text-white truncate">{file.name}</div>
-                      <div className="text-[10px] text-gray-500">{file.size} • {file.date}</div>
-                    </div>
-                  </div>
-                  <button onClick={() => showSuccess(`Downloading ${file.name}...`)} className="text-xs text-cyan-400 hover:underline">Download</button>
+              {sharedFiles.length === 0 ? (
+                <div className="p-4 text-center text-xs text-gray-500 bg-gray-900/40 rounded-xl border border-gray-800">
+                  No files shared in this workspace yet.
                 </div>
-              ))}
+              ) : (
+                sharedFiles.map((file, idx) => (
+                  <div key={idx} className="p-2.5 rounded-xl bg-gray-900/90 border border-gray-800 flex justify-between items-center text-xs">
+                    <div className="flex items-center space-x-2 truncate">
+                      <FileText className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                      <div>
+                        <div className="font-bold text-white truncate">{file.name}</div>
+                        <div className="text-[10px] text-gray-500">{file.size} • {file.date}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => showSuccess(`Downloading ${file.name}...`)} className="text-xs text-cyan-400 hover:underline">Download</button>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {activeTab === 'pinned' && (
             <div className="space-y-2">
-              {pinnedMessages.map((pin, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-800/60 text-xs space-y-1">
-                  <span className="text-[10px] font-bold text-cyan-400">{pin.author}</span>
-                  <p className="text-gray-200">{pin.content}</p>
+              {pinnedMessages.length === 0 ? (
+                <div className="p-4 text-center text-xs text-gray-500 bg-gray-900/40 rounded-xl border border-gray-800">
+                  No pinned announcements yet.
                 </div>
-              ))}
+              ) : (
+                pinnedMessages.map((pin, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-800/60 text-xs space-y-1">
+                    <span className="text-[10px] font-bold text-cyan-400">{pin.author}</span>
+                    <p className="text-gray-200">{pin.content}</p>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

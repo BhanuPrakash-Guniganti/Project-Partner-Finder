@@ -26,8 +26,17 @@ const Onboarding = () => {
   const [newSkillName, setNewSkillName] = useState('');
   const [newSkillProf, setNewSkillProf] = useState('Intermediate');
 
+  const PREDEFINED_DOMAINS = [
+    'Web Development', 'Mobile App', 'AI / ML', 'Cloud Computing',
+    'Data Science', 'Blockchain', 'Open Source', 'Hackathons',
+    'UI/UX Design', 'Cybersecurity', 'Game Dev', 'DevOps'
+  ];
+
+  const initialCustomInterest = (user?.interests || []).find(i => !PREDEFINED_DOMAINS.includes(i)) || '';
   const [experienceLevel, setExperienceLevel] = useState(user?.experienceLevel || 'Intermediate');
   const [interests, setInterests] = useState(user?.interests || ['Web Development', 'AI / ML']);
+  const [isOtherSelected, setIsOtherSelected] = useState(Boolean(initialCustomInterest));
+  const [customInterest, setCustomInterest] = useState(initialCustomInterest);
   const [availability, setAvailability] = useState(user?.availability || '10-15 hrs/week');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar || '');
   const [loading, setLoading] = useState(false);
@@ -58,14 +67,44 @@ const Onboarding = () => {
     }
   };
 
+  const toggleOtherInterest = () => {
+    if (isOtherSelected) {
+      setIsOtherSelected(false);
+      if (customInterest.trim()) {
+        setInterests(interests.filter(i => i !== customInterest.trim()));
+      }
+    } else {
+      setIsOtherSelected(true);
+      if (customInterest.trim() && !interests.includes(customInterest.trim())) {
+        setInterests([...interests, customInterest.trim()]);
+      }
+    }
+  };
+
+  const handleCustomInterestChange = (val) => {
+    setCustomInterest(val);
+    const trimmed = val.trim();
+    const predefinedOnly = interests.filter(i => PREDEFINED_DOMAINS.includes(i));
+    if (trimmed) {
+      setInterests([...predefinedOnly, trimmed]);
+    } else {
+      setInterests(predefinedOnly);
+    }
+  };
+
   const handleFinish = async () => {
     setLoading(true);
+    const finalInterests = Array.from(new Set([
+      ...interests.filter(i => PREDEFINED_DOMAINS.includes(i)),
+      ...(isOtherSelected && customInterest.trim() ? [customInterest.trim()] : [])
+    ]));
+
     try {
       const res = await updateOnboarding({
         bio,
         skills,
         experienceLevel,
-        interests,
+        interests: finalInterests,
         availability,
         avatar: avatarUrl,
         links: {
@@ -259,28 +298,54 @@ const Onboarding = () => {
                 <p className="text-xs text-gray-400">Select domains and project types you want to work on.</p>
               </div>
 
-              <div className="flex flex-wrap gap-2 pt-1">
-                {[
-                  'Web Development', 'Mobile App', 'AI / ML', 'Cloud Computing',
-                  'Data Science', 'Blockchain', 'Open Source', 'Hackathons',
-                  'UI/UX Design', 'Cybersecurity', 'Game Dev', 'DevOps'
-                ].map(domain => {
-                  const selected = interests.includes(domain);
-                  return (
-                    <button
-                      key={domain}
-                      type="button"
-                      onClick={() => toggleInterest(domain)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                        selected 
-                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/10' 
-                          : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
-                      }`}
-                    >
-                      {domain}
-                    </button>
-                  );
-                })}
+              <div className="space-y-3 pt-1">
+                <div className="flex flex-wrap gap-2">
+                  {PREDEFINED_DOMAINS.map(domain => {
+                    const selected = interests.includes(domain);
+                    return (
+                      <button
+                        key={domain}
+                        type="button"
+                        onClick={() => toggleInterest(domain)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                          selected 
+                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/10' 
+                            : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
+                        }`}
+                      >
+                        {domain}
+                      </button>
+                    );
+                  })}
+                  
+                  {/* Other Option */}
+                  <button
+                    type="button"
+                    onClick={toggleOtherInterest}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                      isOtherSelected
+                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/10'
+                        : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
+                    }`}
+                  >
+                    Other
+                  </button>
+                </div>
+
+                {/* Custom Interest Input when Other is selected */}
+                {isOtherSelected && (
+                  <div className="space-y-1.5 pt-1 animate-fadeIn">
+                    <label className="text-xs font-semibold text-gray-300">Custom Interest / Domain</label>
+                    <input
+                      type="text"
+                      placeholder="Enter your project interest/domain"
+                      value={customInterest}
+                      onChange={(e) => handleCustomInterestChange(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                      autoFocus
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}

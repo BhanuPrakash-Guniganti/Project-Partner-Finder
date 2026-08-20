@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import Footer from '../components/common/Footer';
 import MatchScoreBadge from '../components/matching/MatchScoreBadge';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 import { 
   fetchProjectById, applyToProject, fetchProjectApplications, 
   respondApplication, deleteProject, updateProject 
@@ -16,6 +17,12 @@ import {
   ExternalLink, Loader2, AlertCircle, Trash2, Edit3, Share2, Copy, 
   ShieldAlert, MoreVertical, Layers, CheckSquare, Sparkles 
 } from 'lucide-react';
+
+const PREDEFINED_CATEGORIES = [
+  'Web Development', 'Artificial Intelligence', 'Mobile App', 
+  'UI/UX Design', 'Blockchain', 'Cloud & DevOps', 
+  'Data Science', 'Game Dev'
+];
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -42,12 +49,14 @@ const ProjectDetails = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editCategorySelect, setEditCategorySelect] = useState('Web Development');
+  const [editCustomCategory, setEditCustomCategory] = useState('');
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
     teamSize: 4,
     category: '',
-    type: '',
+    type: 'Side Project',
     status: 'Open'
   });
 
@@ -90,11 +99,17 @@ const ProjectDetails = () => {
       const res = await fetchProjectById(id);
       setProject(res.data);
       setTeam(res.data.team);
+
+      const projCat = res.data.category || 'Web Development';
+      const isPredefinedCat = PREDEFINED_CATEGORIES.includes(projCat);
+      setEditCategorySelect(isPredefinedCat ? projCat : 'Other');
+      setEditCustomCategory(isPredefinedCat ? '' : projCat);
+
       setEditForm({
         title: res.data.title || '',
         description: res.data.description || '',
         teamSize: res.data.teamSize || 4,
-        category: res.data.category || 'Web Development',
+        category: projCat,
         type: res.data.type || 'Side Project',
         status: res.data.status || 'Open'
       });
@@ -103,8 +118,9 @@ const ProjectDetails = () => {
         setSelectedRole(res.data.requiredRoles[0].title);
       }
 
-      const ownerId = res.data.ownerId?._id || res.data.ownerId;
-      if (user && ownerId === user._id) {
+      const ownerId = res.data.ownerId?._id ? res.data.ownerId._id.toString() : res.data.ownerId?.toString();
+      const currentUserId = user?._id ? user._id.toString() : user?.id?.toString();
+      if (currentUserId && ownerId && currentUserId === ownerId) {
         setAppsLoading(true);
         try {
           const appsRes = await fetchProjectApplications(id);
@@ -178,6 +194,7 @@ const ProjectDetails = () => {
     try {
       await deleteProject(id);
       showSuccess('Project deleted successfully.');
+      setDeleteModalOpen(false);
       navigate('/projects');
     } catch (err) {
       showError(err.response?.data?.message || 'Failed to delete project.');
@@ -188,9 +205,18 @@ const ProjectDetails = () => {
 
   const handleUpdateProject = async (e) => {
     e.preventDefault();
+    if (editCategorySelect === 'Other' && !editCustomCategory.trim()) {
+      showError('Please enter a custom project category.');
+      return;
+    }
+    const finalCategory = editCategorySelect === 'Other' ? editCustomCategory.trim() : editCategorySelect;
+
     setIsSavingEdit(true);
     try {
-      const res = await updateProject(id, editForm);
+      const res = await updateProject(id, {
+        ...editForm,
+        category: finalCategory
+      });
       setProject(prev => ({ ...prev, ...res.data }));
       setEditModalOpen(false);
       showSuccess('Project details updated!');
@@ -219,9 +245,13 @@ const ProjectDetails = () => {
     );
   }
 
-  const ownerId = project.ownerId?._id || project.ownerId;
-  const isOwner = user && ownerId === user._id;
-  const isTeamMember = team?.members?.some(m => (m.userId?._id || m.userId || m) === user?._id);
+  const ownerId = project.ownerId?._id ? project.ownerId._id.toString() : project.ownerId?.toString();
+  const currentUserId = user?._id ? user._id.toString() : user?.id?.toString();
+  const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
+  const isTeamMember = team?.members?.some(m => {
+    const memId = m.userId?._id ? m.userId._id.toString() : (m.userId ? m.userId.toString() : m.toString());
+    return currentUserId && memId && currentUserId === memId;
+  });
 
   const currentMemberCount = team?.members?.length || 1;
   const maxTeamSize = project.teamSize || 4;
@@ -256,29 +286,71 @@ const ProjectDetails = () => {
             </button>
 
             {moreMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 glass-panel rounded-xl shadow-2xl py-1.5 border border-gray-800 z-50 animate-fadeIn">
-                <button
-                  onClick={handleShareProject}
-                  className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
-                >
-                  <Share2 className="w-4 h-4 text-cyan-400" />
-                  <span>Share Project</span>
-                </button>
-                <button
-                  onClick={handleCopyProjectLink}
-                  className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
-                >
-                  <Copy className="w-4 h-4 text-indigo-400" />
-                  <span>Copy Link</span>
-                </button>
-                <div className="border-t border-gray-800/80 my-1" />
-                <button
-                  onClick={() => { setMoreMenuOpen(false); showSuccess('Report submitted for review.'); }}
-                  className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-red-400 hover:bg-red-950/30 text-left"
-                >
-                  <ShieldAlert className="w-4 h-4 text-red-400" />
-                  <span>Report Project</span>
-                </button>
+              <div className="absolute right-0 mt-2 w-48 glass-panel rounded-xl shadow-2xl py-1.5 border border-gray-800 z-50 animate-fadeIn divide-y divide-gray-800/60">
+                {isOwner ? (
+                  <>
+                    <div className="py-1">
+                      <button
+                        onClick={() => { setMoreMenuOpen(false); setEditModalOpen(true); }}
+                        className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                      >
+                        <Edit3 className="w-4 h-4 text-cyan-400" />
+                        <span>Edit Project</span>
+                      </button>
+                      <button
+                        onClick={() => { setMoreMenuOpen(false); setDeleteModalOpen(true); }}
+                        className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-red-400 hover:bg-red-950/30 text-left"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                        <span>Delete Project</span>
+                      </button>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={() => { setMoreMenuOpen(false); handleShareProject(); }}
+                        className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                      >
+                        <Share2 className="w-4 h-4 text-cyan-400" />
+                        <span>Share Project</span>
+                      </button>
+                      <button
+                        onClick={() => { setMoreMenuOpen(false); handleCopyProjectLink(); }}
+                        className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                      >
+                        <Copy className="w-4 h-4 text-indigo-400" />
+                        <span>Copy Link</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="py-1">
+                      <button
+                        onClick={() => { setMoreMenuOpen(false); handleShareProject(); }}
+                        className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                      >
+                        <Share2 className="w-4 h-4 text-cyan-400" />
+                        <span>Share Project</span>
+                      </button>
+                      <button
+                        onClick={() => { setMoreMenuOpen(false); handleCopyProjectLink(); }}
+                        className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-gray-800/60 text-left"
+                      >
+                        <Copy className="w-4 h-4 text-indigo-400" />
+                        <span>Copy Link</span>
+                      </button>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={() => { setMoreMenuOpen(false); showSuccess('Report submitted for review.'); }}
+                        className="w-full flex items-center space-x-2 px-3.5 py-2 text-xs text-red-400 hover:bg-red-950/30 text-left"
+                      >
+                        <ShieldAlert className="w-4 h-4 text-red-400" />
+                        <span>Report Project</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -522,6 +594,146 @@ const ProjectDetails = () => {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          onConfirm={handleDeleteProject}
+          title="Delete Project?"
+          message="This action cannot be undone. Are you sure you want to delete this project?"
+          confirmText="Delete Project"
+          confirmVariant="danger"
+          loading={isDeleting}
+        />
+
+        {/* Edit Project Modal */}
+        {editModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+            <div className="glass-panel w-full max-w-lg rounded-2xl border border-gray-800 p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto min-w-0">
+              <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                  <Edit3 className="w-4 h-4 text-cyan-400" />
+                  <span>Edit Project</span>
+                </h3>
+                <button onClick={() => setEditModalOpen(false)} className="p-1 text-gray-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateProject} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">Project Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">Project Category</label>
+                    <select
+                      value={editCategorySelect}
+                      onChange={(e) => setEditCategorySelect(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                    >
+                      {PREDEFINED_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  {editCategorySelect === 'Other' && (
+                    <div className="space-y-1 animate-fadeIn">
+                      <label className="text-[11px] font-semibold text-gray-400">Custom Category Name *</label>
+                      <input
+                        type="text"
+                        placeholder="Enter custom project category"
+                        value={editCustomCategory}
+                        onChange={(e) => setEditCustomCategory(e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">Project Type</label>
+                    <select
+                      value={editForm.type}
+                      onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                    >
+                      {['Side Project', 'Hackathon', 'Academic', 'Open Source', 'Research', 'Startup', 'Other'].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">Status</label>
+                    <select
+                      value={editForm.status}
+                      onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                    >
+                      {['Open', 'Team Forming', 'Team Complete', 'In Progress', 'Completed', 'Archived'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">Max Team Size</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="12"
+                    value={editForm.teamSize}
+                    onChange={(e) => setEditForm({ ...editForm, teamSize: parseInt(e.target.value, 10) || 4 })}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">Project Description *</label>
+                  <textarea
+                    rows="4"
+                    required
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-3 border-t border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => setEditModalOpen(false)}
+                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingEdit}
+                    className="gradient-btn px-5 py-2 text-xs font-bold text-white rounded-xl shadow-md disabled:opacity-50"
+                  >
+                    {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

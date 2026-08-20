@@ -41,8 +41,17 @@ const ProfilePage = () => {
   const [newSkillProf, setNewSkillProf] = useState('Intermediate');
   const [skillSearchQuery, setSkillSearchQuery] = useState('');
 
+  const availableInterests = [
+    'Web Development', 'Mobile App', 'AI / ML', 'Cloud Computing',
+    'Data Science', 'Blockchain', 'Open Source', 'Hackathons',
+    'UI/UX Design', 'Cybersecurity', 'Game Dev', 'DevOps'
+  ];
+
   // Project Interests
-  const [interests, setInterests] = useState(user?.interests || ['Web Development', 'AI', 'Mobile Development']);
+  const initialCustomProfileInterest = (user?.interests || []).find(i => !availableInterests.includes(i)) || '';
+  const [interests, setInterests] = useState(user?.interests || ['Web Development', 'AI / ML']);
+  const [isOtherSelected, setIsOtherSelected] = useState(Boolean(initialCustomProfileInterest));
+  const [customInterest, setCustomInterest] = useState(initialCustomProfileInterest);
 
   // Social Links
   const [github, setGithub] = useState(user?.links?.github || '');
@@ -50,11 +59,30 @@ const ProfilePage = () => {
   const [portfolio, setPortfolio] = useState(user?.links?.portfolio || '');
   const [saving, setSaving] = useState(false);
 
-  const availableInterests = [
-    'AI', 'Web Development', 'Mobile Development', 
-    'Data Science', 'Cybersecurity', 'Cloud', 
-    'DevOps', 'Blockchain', 'Other'
-  ];
+  const toggleOtherInterest = () => {
+    if (isOtherSelected) {
+      setIsOtherSelected(false);
+      if (customInterest.trim()) {
+        setInterests(interests.filter(i => i !== customInterest.trim()));
+      }
+    } else {
+      setIsOtherSelected(true);
+      if (customInterest.trim() && !interests.includes(customInterest.trim())) {
+        setInterests([...interests, customInterest.trim()]);
+      }
+    }
+  };
+
+  const handleCustomInterestChange = (val) => {
+    setCustomInterest(val);
+    const trimmed = val.trim();
+    const predefinedOnly = interests.filter(i => availableInterests.includes(i));
+    if (trimmed) {
+      setInterests([...predefinedOnly, trimmed]);
+    } else {
+      setInterests(predefinedOnly);
+    }
+  };
 
   const popularSkills = [
     'React', 'Node.js', 'TypeScript', 'Python', 'MongoDB', 
@@ -94,6 +122,11 @@ const ProfilePage = () => {
 
   const handleSave = async () => {
     setSaving(true);
+    const finalInterests = Array.from(new Set([
+      ...interests.filter(i => availableInterests.includes(i)),
+      ...(isOtherSelected && customInterest.trim() ? [customInterest.trim()] : [])
+    ]));
+
     try {
       const res = await updateProfile({
         name,
@@ -101,7 +134,7 @@ const ProfilePage = () => {
         skills,
         availability,
         experienceLevel,
-        interests,
+        interests: finalInterests,
         avatar: avatarUrl,
         preferredRoles: [professionalTitle],
         links: { github, linkedin, portfolio }
@@ -410,24 +443,53 @@ const ProfilePage = () => {
               {/* SECTION 4: PROJECT INTERESTS */}
               <div className="space-y-3 border-b border-gray-800/80 pb-6">
                 <label className="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Project Interests</label>
-                <div className="flex flex-wrap gap-2">
-                  {availableInterests.map(interest => {
-                    const selected = interests.includes(interest);
-                    return (
-                      <button
-                        key={interest}
-                        type="button"
-                        onClick={() => toggleInterest(interest)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                          selected
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/10'
-                            : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
-                        }`}
-                      >
-                        {interest}
-                      </button>
-                    );
-                  })}
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {availableInterests.map(interest => {
+                      const selected = interests.includes(interest);
+                      return (
+                        <button
+                          key={interest}
+                          type="button"
+                          onClick={() => toggleInterest(interest)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                            selected
+                              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/10'
+                              : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
+                          }`}
+                        >
+                          {interest}
+                        </button>
+                      );
+                    })}
+
+                    {/* Other Button */}
+                    <button
+                      type="button"
+                      onClick={toggleOtherInterest}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                        isOtherSelected
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-500/10'
+                          : 'bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-700'
+                      }`}
+                    >
+                      Other
+                    </button>
+                  </div>
+
+                  {/* Custom Interest Input */}
+                  {isOtherSelected && (
+                    <div className="space-y-1 animate-fadeIn">
+                      <label className="text-[11px] font-semibold text-gray-400">Custom Interest / Domain</label>
+                      <input
+                        type="text"
+                        placeholder="Enter your project interest/domain"
+                        value={customInterest}
+                        onChange={(e) => handleCustomInterestChange(e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

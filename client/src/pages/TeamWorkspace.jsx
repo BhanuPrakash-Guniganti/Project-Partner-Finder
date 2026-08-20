@@ -119,17 +119,8 @@ const TeamWorkspace = () => {
       setMilestones(mileRes.data || []);
       setResources(resRes.data || []);
       
-      // Default sample group messages for rich demonstration if none exist yet
-      if (msgRes.data && msgRes.data.length > 0) {
-        setMessages(msgRes.data);
-      } else {
-        setMessages([
-          { _id: '1', senderId: { _id: 'u1', name: 'Rahul', avatar: '' }, content: "Let's use MongoDB for backend database", createdAt: new Date(Date.now() - 3600000).toISOString() },
-          { _id: '2', senderId: { _id: user?._id || 'me', name: user?.name || 'You' }, content: "Okay 👍 Sounds great!", createdAt: new Date(Date.now() - 3000000).toISOString() },
-          { _id: '3', senderId: { _id: 'u2', name: 'Priya', avatar: '' }, content: "API endpoint tests are ready for integration", createdAt: new Date(Date.now() - 1800000).toISOString() },
-          { _id: '4', senderId: { _id: user?._id || 'me', name: user?.name || 'You' }, content: "Great work everyone! 🚀", createdAt: new Date(Date.now() - 600000).toISOString() }
-        ]);
-      }
+      // Real project group messages
+      setMessages(msgRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -365,76 +356,84 @@ const TeamWorkspace = () => {
             </div>
 
             {/* CHAT MESSAGES AREA */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-950/40 min-w-0 w-full">
-              {messages.map((msg, idx) => {
-                const isMe = msg.senderId?._id === user?._id || msg.senderId === user?._id || msg.senderId?.name === 'You';
-                const senderName = isMe ? 'You' : (msg.senderId?.name || 'Teammate');
-                const avatarUrl = msg.senderId?.avatar;
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-950/40 min-w-0 w-full flex flex-col">
+              {messages.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-2 text-gray-400">
+                  <MessageSquare className="w-10 h-10 text-cyan-400/40 mb-1 animate-pulse" />
+                  <p className="text-sm font-semibold text-gray-200">No messages yet. Start the conversation!</p>
+                  <p className="text-xs text-gray-500 max-w-xs">Send project updates, questions, or ideas to collaborate with your team in real time.</p>
+                </div>
+              ) : (
+                messages.map((msg, idx) => {
+                  const isMe = msg.senderId?._id === user?._id || msg.senderId === user?._id || msg.senderId?.name === 'You';
+                  const senderName = isMe ? 'You' : (msg.senderId?.name || 'Teammate');
+                  const avatarUrl = msg.senderId?.avatar;
 
-                return (
-                  <div
-                    key={msg._id || idx}
-                    className={`flex items-start space-x-2.5 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'} min-w-0 w-full group`}
-                  >
-                    {/* Member Avatar */}
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden shadow-sm mt-1">
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt={senderName} className="w-full h-full object-cover" />
-                      ) : (
-                        senderName.charAt(0).toUpperCase()
-                      )}
-                    </div>
-
-                    {/* Message Bubble Container */}
-                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} min-w-0 max-w-[82%] sm:max-w-md`}>
-                      
-                      {/* Sender Name for Incoming Messages */}
-                      {!isMe && (
-                        <span className="text-[10px] font-bold text-cyan-400 mb-0.5 px-1">{senderName}</span>
-                      )}
-
-                      {/* Message Bubble */}
-                      <div
-                        onClick={() => setSelectedMessageAction(selectedMessageAction === msg._id ? null : msg._id)}
-                        className={`p-3 rounded-2xl text-xs shadow-md transition-all relative cursor-pointer ${
-                          isMe 
-                            ? 'bg-cyan-600 text-white rounded-tr-none' 
-                            : 'bg-gray-800 text-gray-200 rounded-tl-none border border-gray-700/80'
-                        }`}
-                      >
-                        <p className="break-words leading-relaxed">{msg.content}</p>
-
-                        {/* Timestamp & Read Ticks */}
-                        <div className={`flex items-center justify-end space-x-1 text-[9px] mt-1 font-mono ${isMe ? 'text-cyan-200' : 'text-gray-400'}`}>
-                          <span>{msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '7:35 PM'}</span>
-                          {isMe && <CheckCheck className="w-3 h-3 text-cyan-200" />}
-                        </div>
+                  return (
+                    <div
+                      key={msg._id || idx}
+                      className={`flex items-start space-x-2.5 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'} min-w-0 w-full group`}
+                    >
+                      {/* Member Avatar */}
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 border border-cyan-400/40 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden shadow-sm mt-1">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt={senderName} className="w-full h-full object-cover" />
+                        ) : (
+                          senderName.charAt(0).toUpperCase()
+                        )}
                       </div>
 
-                      {/* Message Context Action Menu */}
-                      {selectedMessageAction === msg._id && (
-                        <div className="flex gap-2 mt-1 px-1 text-[10px] font-semibold animate-fadeIn">
-                          <button onClick={() => setReplyingTo(msg)} className="px-2 py-0.5 rounded bg-gray-800 text-cyan-300 hover:text-white flex items-center space-x-1">
-                            <Reply className="w-3 h-3" />
-                            <span>Reply</span>
-                          </button>
-                          <button onClick={() => handleCopyMessage(msg)} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 hover:text-white flex items-center space-x-1">
-                            <Copy className="w-3 h-3" />
-                            <span>Copy</span>
-                          </button>
-                          {isMe && (
-                            <button onClick={() => handleDeleteOwnMessage(msg._id)} className="px-2 py-0.5 rounded bg-red-950 text-red-400 hover:text-red-300 flex items-center space-x-1">
-                              <Trash2 className="w-3 h-3" />
-                              <span>Delete</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      {/* Message Bubble Container */}
+                      <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} min-w-0 max-w-[82%] sm:max-w-md`}>
+                        
+                        {/* Sender Name for Incoming Messages */}
+                        {!isMe && (
+                          <span className="text-[10px] font-bold text-cyan-400 mb-0.5 px-1">{senderName}</span>
+                        )}
 
+                        {/* Message Bubble */}
+                        <div
+                          onClick={() => setSelectedMessageAction(selectedMessageAction === msg._id ? null : msg._id)}
+                          className={`p-3 rounded-2xl text-xs shadow-md transition-all relative cursor-pointer ${
+                            isMe 
+                              ? 'bg-cyan-600 text-white rounded-tr-none' 
+                              : 'bg-gray-800 text-gray-200 rounded-tl-none border border-gray-700/80'
+                          }`}
+                        >
+                          <p className="break-words leading-relaxed">{msg.content}</p>
+
+                          {/* Timestamp & Read Ticks */}
+                          <div className={`flex items-center justify-end space-x-1 text-[9px] mt-1 font-mono ${isMe ? 'text-cyan-200' : 'text-gray-400'}`}>
+                            <span>{msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '7:35 PM'}</span>
+                            {isMe && <CheckCheck className="w-3 h-3 text-cyan-200" />}
+                          </div>
+                        </div>
+
+                        {/* Message Context Action Menu */}
+                        {selectedMessageAction === msg._id && (
+                          <div className="flex gap-2 mt-1 px-1 text-[10px] font-semibold animate-fadeIn">
+                            <button onClick={() => setReplyingTo(msg)} className="px-2 py-0.5 rounded bg-gray-800 text-cyan-300 hover:text-white flex items-center space-x-1">
+                              <Reply className="w-3 h-3" />
+                              <span>Reply</span>
+                            </button>
+                            <button onClick={() => handleCopyMessage(msg)} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 hover:text-white flex items-center space-x-1">
+                              <Copy className="w-3 h-3" />
+                              <span>Copy</span>
+                            </button>
+                            {isMe && (
+                              <button onClick={() => handleDeleteOwnMessage(msg._id)} className="px-2 py-0.5 rounded bg-red-950 text-red-400 hover:text-red-300 flex items-center space-x-1">
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
 
               {/* Typing Indicator */}
               {typingUser && (

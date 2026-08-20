@@ -18,6 +18,7 @@ const CreateProject = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Web Development');
+  const [customCategory, setCustomCategory] = useState('');
   const [projectGoals, setProjectGoals] = useState('');
   const [isAiImproving, setIsAiImproving] = useState(false);
 
@@ -85,6 +86,14 @@ const CreateProject = () => {
       return;
     }
 
+    if (category === 'Other' && !customCategory.trim()) {
+      setError('Please enter a custom project category.');
+      showError('Please enter a custom project category.');
+      return;
+    }
+
+    const finalCategory = category === 'Other' ? customCategory.trim() : category;
+
     setLoading(true);
     setError('');
 
@@ -92,7 +101,7 @@ const CreateProject = () => {
       const res = await createProject({
         title,
         description: projectGoals ? `${description}\n\nGoals: ${projectGoals}` : description,
-        category,
+        category: finalCategory,
         teamSize: maxMembers,
         duration,
         availability,
@@ -171,22 +180,39 @@ const CreateProject = () => {
                 </div>
 
                 {/* Category */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-gray-300">Project Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
-                  >
-                    <option value="Web Development">Web Development</option>
-                    <option value="Artificial Intelligence">Artificial Intelligence</option>
-                    <option value="Mobile App">Mobile App</option>
-                    <option value="UI/UX Design">UI/UX Design</option>
-                    <option value="Blockchain">Blockchain</option>
-                    <option value="Cloud & DevOps">Cloud & DevOps</option>
-                    <option value="Data Science">Data Science</option>
-                    <option value="Game Dev">Game Dev</option>
-                  </select>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">Project Category</label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                    >
+                      <option value="Web Development">Web Development</option>
+                      <option value="Artificial Intelligence">Artificial Intelligence</option>
+                      <option value="Mobile App">Mobile App</option>
+                      <option value="UI/UX Design">UI/UX Design</option>
+                      <option value="Blockchain">Blockchain</option>
+                      <option value="Cloud & DevOps">Cloud & DevOps</option>
+                      <option value="Data Science">Data Science</option>
+                      <option value="Game Dev">Game Dev</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  {category === 'Other' && (
+                    <div className="space-y-1 animate-fadeIn">
+                      <label className="text-[11px] font-semibold text-gray-400">Custom Category Name *</label>
+                      <input
+                        type="text"
+                        placeholder="Enter custom project category"
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                        autoFocus
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Description + AI Improvement Button */}

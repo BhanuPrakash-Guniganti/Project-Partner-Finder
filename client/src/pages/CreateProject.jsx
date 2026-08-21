@@ -30,6 +30,13 @@ const CreateProject = () => {
     { title: 'Backend Developer', count: 1, skills: ['Node.js', 'MongoDB'] }
   ]);
 
+  // Creator Participation & Role
+  const [creatorParticipation, setCreatorParticipation] = useState(true);
+  const [creatorRoleSelect, setCreatorRoleSelect] = useState('Full Stack Developer');
+  const [creatorCustomRole, setCreatorCustomRole] = useState('');
+  const [creatorSkills, setCreatorSkills] = useState(['React', 'Node.js']);
+  const [newCreatorSkill, setNewCreatorSkill] = useState('');
+
   // Team Specs
   const [minMembers, setMinMembers] = useState(2);
   const [maxMembers, setMaxMembers] = useState(5);
@@ -44,6 +51,7 @@ const CreateProject = () => {
 
   // Expandable Section Toggles for clean mobile experience
   const [basicSectionOpen, setBasicSectionOpen] = useState(true);
+  const [creatorSectionOpen, setCreatorSectionOpen] = useState(true);
   const [skillsSectionOpen, setSkillsSectionOpen] = useState(true);
   const [teamSectionOpen, setTeamSectionOpen] = useState(true);
   const [linksSectionOpen, setLinksSectionOpen] = useState(false);
@@ -61,6 +69,18 @@ const CreateProject = () => {
 
   const handleRemoveSkill = (skillToRemove) => {
     setSkills(skills.filter(s => s !== skillToRemove));
+  };
+
+  const handleAddCreatorSkill = (skillToAdd = newCreatorSkill) => {
+    if (!skillToAdd.trim()) return;
+    if (!creatorSkills.includes(skillToAdd.trim())) {
+      setCreatorSkills([...creatorSkills, skillToAdd.trim()]);
+    }
+    setNewCreatorSkill('');
+  };
+
+  const handleRemoveCreatorSkill = (skillToRemove) => {
+    setCreatorSkills(creatorSkills.filter(s => s !== skillToRemove));
   };
 
   const handleAiImproveDescription = () => {
@@ -94,6 +114,10 @@ const CreateProject = () => {
 
     const finalCategory = category === 'Other' ? customCategory.trim() : category;
 
+    const finalCreatorRole = creatorParticipation
+      ? (creatorRoleSelect === 'Custom Role' ? (creatorCustomRole.trim() || 'Team Member') : creatorRoleSelect)
+      : '';
+
     setLoading(true);
     setError('');
 
@@ -110,7 +134,12 @@ const CreateProject = () => {
         requiredSkills: skills,
         githubUrl,
         referenceUrl,
-        difficulty
+        difficulty,
+        creator: {
+          participation: creatorParticipation,
+          role: finalCreatorRole,
+          skills: creatorParticipation ? creatorSkills : []
+        }
       });
 
       showSuccess('Project created successfully!');
@@ -254,7 +283,154 @@ const CreateProject = () => {
             )}
           </div>
 
-          {/* SECTION 2: REQUIRED SKILLS & ROLES */}
+          {/* SECTION 2: CREATOR PARTICIPATION & ROLE */}
+          <div className="glass-panel rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setCreatorSectionOpen(!creatorSectionOpen)}
+              className="w-full p-4 sm:p-5 flex justify-between items-center text-left bg-gray-900/60 hover:bg-gray-900/90 transition-colors"
+            >
+              <div className="flex items-center space-x-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span className="text-sm font-bold text-white uppercase tracking-wider">2. Creator Participation & Role</span>
+              </div>
+              {creatorSectionOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </button>
+
+            {creatorSectionOpen && (
+              <div className="p-5 space-y-4 border-t border-gray-800/80 animate-fadeIn">
+                {/* Question: Will you be working on this project? */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-200">
+                    Will you be working on this project? *
+                  </label>
+                  <p className="text-[11px] text-gray-400">
+                    Specify whether you plan to build alongside teammates or strictly manage applications and project milestones.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    {/* Option 1: Yes */}
+                    <div
+                      onClick={() => setCreatorParticipation(true)}
+                      className={`cursor-pointer p-4 rounded-2xl border transition-all text-left flex flex-col justify-between ${
+                        creatorParticipation
+                          ? 'bg-emerald-950/40 border-emerald-500 text-emerald-200 shadow-lg shadow-emerald-950/30'
+                          : 'bg-gray-900/70 border-gray-800 text-gray-400 hover:border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-white flex items-center space-x-1.5">
+                          <span>Yes, I will work on this project</span>
+                        </span>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${creatorParticipation ? 'border-emerald-400 bg-emerald-500 text-black' : 'border-gray-600'}`}>
+                          {creatorParticipation && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-gray-400">
+                        You take an active role on the team and count toward project team capacity.
+                      </p>
+                    </div>
+
+                    {/* Option 2: No */}
+                    <div
+                      onClick={() => setCreatorParticipation(false)}
+                      className={`cursor-pointer p-4 rounded-2xl border transition-all text-left flex flex-col justify-between ${
+                        !creatorParticipation
+                          ? 'bg-cyan-950/40 border-cyan-500 text-cyan-200 shadow-lg shadow-cyan-950/30'
+                          : 'bg-gray-900/70 border-gray-800 text-gray-400 hover:border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-white flex items-center space-x-1.5">
+                          <span>No, I am only creating/managing</span>
+                        </span>
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${!creatorParticipation ? 'border-cyan-400 bg-cyan-500 text-black' : 'border-gray-600'}`}>
+                          {!creatorParticipation && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-gray-400">
+                        You remain the project owner/admin but do NOT consume a development team member slot.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* If YES: Creator Role & Skills */}
+                {creatorParticipation && (
+                  <div className="p-4 bg-gray-900/90 rounded-2xl border border-gray-800 space-y-4 animate-fadeIn">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-300">Your Project Role *</label>
+                      <select
+                        value={creatorRoleSelect}
+                        onChange={(e) => setCreatorRoleSelect(e.target.value)}
+                        className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                      >
+                        <option value="Project Lead">Project Lead</option>
+                        <option value="Frontend Developer">Frontend Developer</option>
+                        <option value="Backend Developer">Backend Developer</option>
+                        <option value="Full Stack Developer">Full Stack Developer</option>
+                        <option value="UI/UX Designer">UI/UX Designer</option>
+                        <option value="AI/ML Engineer">AI/ML Engineer</option>
+                        <option value="Data Scientist">Data Scientist</option>
+                        <option value="DevOps Engineer">DevOps Engineer</option>
+                        <option value="Cybersecurity Engineer">Cybersecurity Engineer</option>
+                        <option value="Custom Role">Custom Role</option>
+                      </select>
+                    </div>
+
+                    {creatorRoleSelect === 'Custom Role' && (
+                      <div className="space-y-1 animate-fadeIn">
+                        <label className="text-[11px] font-semibold text-gray-400">Specify Custom Role Title *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Blockchain Architect / Game Designer"
+                          value={creatorCustomRole}
+                          onChange={(e) => setCreatorCustomRole(e.target.value)}
+                          className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500"
+                          autoFocus
+                        />
+                      </div>
+                    )}
+
+                    {/* Creator Skills for Role */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-gray-300">Your Specific Skills for this Role</label>
+                      <div className="flex flex-wrap gap-2">
+                        {creatorSkills.map((s) => (
+                          <span key={s} className="px-3 py-1.5 rounded-xl bg-indigo-950/70 text-indigo-300 border border-indigo-800 text-xs font-semibold flex items-center space-x-1.5">
+                            <span>{s}</span>
+                            <button type="button" onClick={() => handleRemoveCreatorSkill(s)} className="text-indigo-400 hover:text-red-400">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2 pt-1">
+                        <input
+                          type="text"
+                          placeholder="Add your skill (e.g. React, Next.js, PyTorch)"
+                          value={newCreatorSkill}
+                          onChange={(e) => setNewCreatorSkill(e.target.value)}
+                          className="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddCreatorSkill()}
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 3: REQUIRED SKILLS & OPEN ROLES */}
           <div className="glass-panel rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
             <button
               type="button"
@@ -263,7 +439,7 @@ const CreateProject = () => {
             >
               <div className="flex items-center space-x-2.5">
                 <Users className="w-4 h-4 text-indigo-400" />
-                <span className="text-sm font-bold text-white uppercase tracking-wider">2. Required Skills & Team Roles</span>
+                <span className="text-sm font-bold text-white uppercase tracking-wider">3. Required Skills & Open Team Roles</span>
               </div>
               {skillsSectionOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
             </button>
@@ -272,7 +448,7 @@ const CreateProject = () => {
               <div className="p-5 space-y-4 border-t border-gray-800/80 animate-fadeIn">
                 {/* Required Skills Chip List */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-gray-300">Required Skills</label>
+                  <label className="text-xs font-semibold text-gray-300">Overall Project Required Skills</label>
                   
                   <div className="flex flex-wrap gap-2">
                     {skills.map((s) => (
@@ -305,12 +481,20 @@ const CreateProject = () => {
                 </div>
 
                 {/* Team Role Builder Component */}
-                <RoleBuilder roles={requiredRoles} onChange={setRequiredRoles} />
+                <RoleBuilder 
+                  roles={requiredRoles} 
+                  onChange={setRequiredRoles} 
+                  creatorInfo={{
+                    participation: creatorParticipation,
+                    role: creatorRoleSelect === 'Custom Role' ? creatorCustomRole : creatorRoleSelect,
+                    skills: creatorSkills
+                  }}
+                />
               </div>
             )}
           </div>
 
-          {/* SECTION 3: TEAM SPECS & REQUIREMENTS */}
+          {/* SECTION 4: TEAM SPECS & REQUIREMENTS */}
           <div className="glass-panel rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
             <button
               type="button"
@@ -319,7 +503,7 @@ const CreateProject = () => {
             >
               <div className="flex items-center space-x-2.5">
                 <Sliders className="w-4 h-4 text-purple-400" />
-                <span className="text-sm font-bold text-white uppercase tracking-wider">3. Team Specs & Requirements</span>
+                <span className="text-sm font-bold text-white uppercase tracking-wider">4. Team Specs & Requirements</span>
               </div>
               {teamSectionOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
             </button>
@@ -431,7 +615,7 @@ const CreateProject = () => {
             )}
           </div>
 
-          {/* SECTION 4: REPOSITORIES & LINKS */}
+          {/* SECTION 5: REPOSITORIES & LINKS */}
           <div className="glass-panel rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
             <button
               type="button"
@@ -440,7 +624,7 @@ const CreateProject = () => {
             >
               <div className="flex items-center space-x-2.5">
                 <LinkIcon className="w-4 h-4 text-emerald-400" />
-                <span className="text-sm font-bold text-white uppercase tracking-wider">4. Repositories & Reference Links (Optional)</span>
+                <span className="text-sm font-bold text-white uppercase tracking-wider">5. Repositories & Reference Links (Optional)</span>
               </div>
               {linksSectionOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
             </button>

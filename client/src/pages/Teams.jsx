@@ -55,14 +55,21 @@ const Teams = () => {
 
   const activeTeam = teams.find(t => t._id === selectedTeamId) || teams[0];
   const project = activeTeam?.projectId || {};
-  const isOwner = user && (project.ownerId === user._id || project.ownerId?._id === user._id);
+  const isOwner = user && (
+    project.ownerId === user._id || 
+    project.ownerId?._id === user._id || 
+    project.ownerId === user.id || 
+    project.ownerId?._id === user.id
+  );
 
   // Calculate unique skills across team members
   const allTeamSkills = Array.from(new Set(
     activeTeam?.members?.flatMap(m => m.userId?.skills?.map(s => s.name || s) || []) || ['React', 'Node.js', 'MongoDB', 'Python', 'Tailwind', 'Express.js', 'Figma', 'TypeScript']
   ));
 
-  const projectProgress = project.progress !== undefined ? project.progress : 72;
+  const maxTeamSize = project.teamSize || 4;
+  const currentMemberCount = activeTeam?.members?.length || 0;
+  const fillPct = maxTeamSize > 0 ? Math.round((currentMemberCount / maxTeamSize) * 100) : 0;
 
   const handleOpenAssignRole = (member) => {
     setRoleModalMember(member);
@@ -192,9 +199,9 @@ const Teams = () => {
             <div className="grid grid-cols-3 gap-3 w-full">
               <div className="glass-panel p-4 rounded-2xl border border-gray-800 text-center space-y-1 shadow-md">
                 <div className="text-xl sm:text-2xl font-extrabold text-cyan-400">
-                  {activeTeam.members?.length || 1} Members
+                  {currentMemberCount} / {maxTeamSize}
                 </div>
-                <div className="text-[11px] font-semibold text-gray-400">Active Team Size</div>
+                <div className="text-[11px] font-semibold text-gray-400">Positions Filled</div>
               </div>
 
               <div className="glass-panel p-4 rounded-2xl border border-gray-800 text-center space-y-1 shadow-md">
@@ -206,9 +213,9 @@ const Teams = () => {
 
               <div className="glass-panel p-4 rounded-2xl border border-gray-800 text-center space-y-1 shadow-md">
                 <div className="text-xl sm:text-2xl font-extrabold text-emerald-400">
-                  {projectProgress}%
+                  {fillPct}%
                 </div>
-                <div className="text-[11px] font-semibold text-gray-400">Project Progress</div>
+                <div className="text-[11px] font-semibold text-gray-400">Roster Capacity</div>
               </div>
             </div>
 
@@ -238,12 +245,13 @@ const Teams = () => {
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                {activeTeam.members?.map((member, idx) => {
-                  const memberUser = member.userId || {};
-                  const isMemberOwner = member.isOwner || (project.ownerId === memberUser._id || project.ownerId?._id === memberUser._id);
-                  const isOnline = idx % 2 === 0; // Simulated active online state for demonstration
-                  const memberSkills = memberUser.skills?.map(s => s.name || s) || ['React', 'Node.js'];
+              {activeTeam.members && activeTeam.members.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                  {activeTeam.members?.map((member, idx) => {
+                    const memberUser = member.userId || {};
+                    const isMemberOwner = member.isOwner || (project.ownerId === memberUser._id || project.ownerId?._id === memberUser._id);
+                    const isOnline = idx % 2 === 0; // Simulated active online state for demonstration
+                    const memberSkills = memberUser.skills?.map(s => s.name || s) || ['React', 'Node.js'];
 
                   return (
                     <div key={memberUser._id || idx} className="glass-card rounded-2xl p-5 border border-gray-800 flex flex-col justify-between space-y-4 shadow-xl min-w-0">
@@ -356,6 +364,28 @@ const Teams = () => {
                   );
                 })}
               </div>
+            ) : (
+              <div className="p-8 rounded-2xl bg-gray-900/50 border border-gray-800 text-center space-y-2">
+                <Users className="w-8 h-8 text-gray-500 mx-auto" />
+                <h4 className="text-sm font-bold text-white">No active team members yet</h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  {isOwner 
+                    ? "Your project team roster is currently empty. You can invite qualified candidates or review pending applications to recruit members."
+                    : "No team members have been added to this roster yet."}
+                </p>
+                {isOwner && (
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setInviteModalOpen(true)}
+                      className="gradient-btn px-4 py-2 rounded-xl text-xs font-bold text-white inline-flex items-center space-x-1.5 shadow-md"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Invite Candidates</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             </div>
 
           </div>

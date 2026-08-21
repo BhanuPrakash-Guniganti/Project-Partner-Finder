@@ -3,7 +3,15 @@ const Project = require('../models/Project');
 
 const getUserTeams = async (req, res, next) => {
   try {
-    const teams = await Team.find({ 'members.userId': req.user.id })
+    const userOwnedProjects = await Project.find({ ownerId: req.user.id }).select('_id');
+    const ownedProjectIds = userOwnedProjects.map(p => p._id);
+
+    const teams = await Team.find({
+      $or: [
+        { 'members.userId': req.user.id },
+        { projectId: { $in: ownedProjectIds } }
+      ]
+    })
       .populate('projectId')
       .populate('members.userId', 'name avatar email skills bio preferredRoles');
 
@@ -34,9 +42,11 @@ const updateMemberRole = async (req, res, next) => {
 
     if (!team) return res.status(404).json({ message: 'Team workspace not found.' });
 
-    // Check if requester is owner
-    const isOwner = team.members.some(m => m.userId.toString() === req.user.id && m.isOwner);
-    if (!isOwner && req.user.role !== 'admin') {
+    const project = await Project.findById(req.params.projectId);
+    const isProjectOwner = project && project.ownerId.toString() === req.user.id;
+    const isTeamOwner = team.members.some(m => m.userId.toString() === req.user.id && m.isOwner);
+
+    if (!isProjectOwner && !isTeamOwner && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Only project owner can manage team members.' });
     }
 

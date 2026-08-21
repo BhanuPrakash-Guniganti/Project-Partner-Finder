@@ -6,8 +6,22 @@ const requiredRoleSchema = new mongoose.Schema({
   skills: [{ type: String }]
 });
 
+const creatorSchema = new mongoose.Schema({
+  participation: { type: Boolean, default: true },
+  role: { type: String, default: 'Project Lead' },
+  skills: [{ type: String }]
+}, { _id: false });
+
 const projectSchema = new mongoose.Schema({
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  creator: {
+    type: creatorSchema,
+    default: () => ({
+      participation: true,
+      role: 'Project Lead',
+      skills: []
+    })
+  },
   title: { type: String, required: true },
   description: { type: String, required: true },
   category: { type: String, default: 'Web Development' },

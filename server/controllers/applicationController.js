@@ -20,7 +20,7 @@ const applyToProject = async (req, res, next) => {
 
     // Capacity Check
     const team = await Team.findOne({ projectId });
-    const currentMemberCount = team ? team.members.length : 1;
+    const currentMemberCount = team ? team.members.length : 0;
     const maxCapacity = project.teamSize || 4;
 
     if (currentMemberCount >= maxCapacity || project.status === 'Team Full' || project.status === 'Team Complete') {
@@ -178,13 +178,18 @@ const respondApplication = async (req, res, next) => {
       // Add member to project team
       let team = await Team.findOne({ projectId: application.projectId._id });
       if (!team) {
+        const creatorParticipates = application.projectId.creator?.participation !== false;
+        const initialMembers = [];
+        if (creatorParticipates) {
+          initialMembers.push({
+            userId: application.projectId.ownerId,
+            role: application.projectId.creator?.role || 'Project Lead',
+            isOwner: true
+          });
+        }
         team = await Team.create({
           projectId: application.projectId._id,
-          members: [{
-            userId: application.projectId.ownerId,
-            role: 'Project Owner',
-            isOwner: true
-          }]
+          members: initialMembers
         });
       }
 

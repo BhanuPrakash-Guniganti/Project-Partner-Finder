@@ -7,15 +7,24 @@ const createProject = async (req, res, next) => {
     const {
       title, description, category, type, requiredRoles,
       requiredSkills, optionalSkills, teamSize, duration,
-      availability, deadline, visibility, status
+      availability, deadline, visibility, status, creator
     } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({ message: 'Title and description are required.' });
     }
 
+    const isParticipating = creator?.participation !== undefined ? Boolean(creator.participation) : true;
+    const creatorRole = isParticipating ? (creator?.role?.trim() || 'Project Lead') : '';
+    const creatorSkills = isParticipating && Array.isArray(creator?.skills) ? creator.skills : [];
+
     const project = await Project.create({
       ownerId: req.user.id,
+      creator: {
+        participation: isParticipating,
+        role: creatorRole,
+        skills: creatorSkills
+      },
       title,
       description,
       category: category || 'Web Development',
@@ -31,15 +40,19 @@ const createProject = async (req, res, next) => {
       status: status || 'Open'
     });
 
-    // Auto-create Team for this project with owner as first member
-    const user = await User.findById(req.user.id);
+    // Auto-create Team for this project: add creator to team members only if participating
+    const initialMembers = [];
+    if (isParticipating) {
+      initialMembers.push({
+        userId: req.user.id,
+        role: creatorRole || 'Project Lead',
+        isOwner: true
+      });
+    }
+
     await Team.create({
       projectId: project._id,
-      members: [{
-        userId: req.user.id,
-        role: 'Project Lead',
-        isOwner: true
-      }]
+      members: initialMembers
     });
 
     res.status(201).json(project);
@@ -93,7 +106,20 @@ const getProjects = async (req, res, next) => {
       .populate('ownerId', 'name avatar email skills bio')
       .sort(sortOptions);
 
-    res.json(projects);
+    const projectIds = projects.map(p => p._id);
+    const teams = await Team.find({ projectId: { $in: projectIds } }).select('projectId members');
+    const teamMap = new Map();
+    teams.forEach(t => {
+      teamMap.set(t.projectId.toString(), t.members ? t.members.length : 0);
+    });
+
+    const projectsWithCounts = projects.map(p => {
+      const pObj = p.toObject();
+      pObj.currentMemberCount = teamMap.get(p._id.toString()) || 0;
+      return pObj;
+    });
+
+    res.json(projectsWithCounts);
   } catch (error) {
     next(error);
   }
@@ -112,7 +138,8 @@ const getProjectById = async (req, res, next) => {
 
     res.json({
       ...project.toObject(),
-      team
+      team,
+      currentMemberCount: team?.members ? team.members.length : 0
     });
   } catch (error) {
     next(error);
@@ -175,9 +202,28 @@ const getMyProjects = async (req, res, next) => {
       .filter(t => t.projectId && t.projectId.ownerId.toString() !== req.user.id)
       .map(t => t.projectId);
 
+    const allProjIds = [...createdProjects.map(p => p._id), ...joinedProjects.map(p => p._id)];
+    const teams = await Team.find({ projectId: { $in: allProjIds } }).select('projectId members');
+    const teamMap = new Map();
+    teams.forEach(t => {
+      teamMap.set(t.projectId.toString(), t.members ? t.members.length : 0);
+    });
+
+    const populatedCreated = createdProjects.map(p => {
+      const pObj = p.toObject();
+      pObj.currentMemberCount = teamMap.get(p._id.toString()) || 0;
+      return pObj;
+    });
+
+    const populatedJoined = joinedProjects.map(p => {
+      const pObj = p.toObject();
+      pObj.currentMemberCount = teamMap.get(p._id.toString()) || 0;
+      return pObj;
+    });
+
     res.json({
-      created: createdProjects,
-      joined: joinedProjects
+      created: populatedCreated,
+      joined: populatedJoined
     });
   } catch (error) {
     next(error);

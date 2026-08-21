@@ -52,7 +52,7 @@ const ProjectChatDetailsModal = ({ isOpen, onClose, project, team, onOpenInvite,
             </div>
             <div className="min-w-0">
               <h2 className="text-base sm:text-lg font-bold text-white truncate"># {project.title}</h2>
-              <p className="text-xs text-cyan-400 font-semibold">{members.length} Members • Project Chat Details</p>
+              <p className="text-xs text-cyan-400 font-semibold">{members.length} of {project.teamSize || 4} Positions Filled • Project Chat</p>
             </div>
           </div>
 
@@ -86,7 +86,11 @@ const ProjectChatDetailsModal = ({ isOpen, onClose, project, team, onOpenInvite,
                 <span>Admin</span>
               </span>
             </div>
-            <p className="text-[10px] text-cyan-400">Project Lead & Creator</p>
+            <p className="text-[10px] text-cyan-400">
+              {project.creator?.participation !== false 
+                ? `Project Creator & ${project.creator?.role || 'Project Lead'}`
+                : 'Project Creator (Management Only)'}
+            </p>
           </div>
         </div>
 
@@ -105,30 +109,36 @@ const ProjectChatDetailsModal = ({ isOpen, onClose, project, team, onOpenInvite,
         {/* Team Members Count & Avatars List */}
         <div className="space-y-2">
           <div className="flex justify-between items-center text-xs">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Team Members ({members.length})</label>
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Team Members ({members.length} / {project.teamSize || 4})</label>
             <Link to="/teams" onClick={onClose} className="text-cyan-400 font-semibold hover:underline text-[11px]">View Team Roster →</Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {members.map((m, idx) => {
-              const memUser = m.userId || {};
-              return (
-                <div key={idx} className="p-2.5 rounded-xl bg-gray-900/90 border border-gray-800 flex items-center space-x-2.5 text-xs">
-                  <div className="w-8 h-8 rounded-full bg-cyan-800/30 text-cyan-300 font-bold flex items-center justify-center text-xs overflow-hidden flex-shrink-0">
-                    {memUser.avatar ? (
-                      <img src={memUser.avatar} alt="User" className="w-full h-full object-cover" />
-                    ) : (
-                      memUser.name?.charAt(0)?.toUpperCase() || 'M'
-                    )}
+          {members.length === 0 ? (
+            <div className="text-center py-3 text-xs text-gray-500 bg-gray-900/60 rounded-xl border border-gray-800">
+              No team members joined yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {members.map((m, idx) => {
+                const memUser = m.userId || {};
+                return (
+                  <div key={idx} className="p-2.5 rounded-xl bg-gray-900/90 border border-gray-800 flex items-center space-x-2.5 text-xs">
+                    <div className="w-8 h-8 rounded-full bg-cyan-800/30 text-cyan-300 font-bold flex items-center justify-center text-xs overflow-hidden flex-shrink-0">
+                      {memUser.avatar ? (
+                        <img src={memUser.avatar} alt="User" className="w-full h-full object-cover" />
+                      ) : (
+                        memUser.name?.charAt(0)?.toUpperCase() || 'M'
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-white text-xs truncate">{memUser.name || 'Team Member'}</div>
+                      <div className="text-[10px] text-cyan-400 truncate">{m.role || 'Developer'} {m.isOwner && '(Creator)'}</div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-bold text-white text-xs truncate">{memUser.name || 'Team Member'}</div>
-                    <div className="text-[10px] text-cyan-400 truncate">{m.role || 'Developer'} {m.isOwner && '(Lead)'}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* TABBED SHARED ASSETS & PINNED MESSAGES */}

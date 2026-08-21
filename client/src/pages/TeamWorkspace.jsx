@@ -238,15 +238,15 @@ const TeamWorkspace = () => {
     );
   }
 
-  const teamMemberCount = team?.members?.length || 5;
-  const onlineCount = Math.min(teamMemberCount, 3); // Simulated active online count
+  const teamMemberCount = team?.members?.length || 0;
+  const onlineCount = Math.min(teamMemberCount || 1, 3); // Active online count
 
   const tabs = [
     { id: 'chat', name: 'Project Group Chat', icon: MessageSquare },
     { id: 'overview', name: 'Overview', icon: Layout },
     { id: 'tasks', name: 'Kanban Tasks', icon: CheckSquare, badge: tasks.length },
     { id: 'resources', name: 'Resources', icon: LinkIcon, badge: resources.length },
-    { id: 'team', name: 'Team Roster', icon: Users, badge: teamMemberCount }
+    { id: 'team', name: 'Team Roster', icon: Users, badge: `${teamMemberCount}/${project?.teamSize || 4}` }
   ];
 
   return (
@@ -572,6 +572,300 @@ const TeamWorkspace = () => {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* RESOURCES TAB */}
+        {activeTab === 'resources' && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                <LinkIcon className="w-4 h-4 text-cyan-400" />
+                <span>Project Resources & Shared Links</span>
+              </h3>
+              <button 
+                onClick={() => setResModalOpen(true)} 
+                className="gradient-btn px-3.5 py-1.5 rounded-xl text-xs font-bold text-white flex items-center space-x-1 shadow-md"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Resource</span>
+              </button>
+            </div>
+
+            {resources.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-gray-900/50 border border-gray-800 text-center space-y-2">
+                <LinkIcon className="w-8 h-8 text-gray-500 mx-auto" />
+                <h4 className="text-sm font-bold text-white">No resources shared yet</h4>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  Share GitHub repositories, Figma links, documentation, and cloud resources with your project team.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {resources.map((res) => (
+                  <a
+                    key={res._id}
+                    href={res.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="glass-card p-4 rounded-2xl border border-gray-800 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-2 group"
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
+                        {res.type || 'Link'}
+                      </span>
+                      <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-xs truncate group-hover:text-cyan-300">{res.name}</h4>
+                      <p className="text-[11px] text-gray-500 truncate mt-0.5">{res.url}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TEAM ROSTER TAB */}
+        {activeTab === 'team' && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                <Users className="w-4 h-4 text-cyan-400" />
+                <span>Project Team Roster ({teamMemberCount} of {project?.teamSize || 4} Positions Filled)</span>
+              </h3>
+            </div>
+
+            {/* Creator / Owner Banner */}
+            <div className="glass-panel p-4 rounded-2xl border border-gray-800 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-cyan-700/30 text-cyan-300 font-bold flex items-center justify-center border border-cyan-500/30 text-sm overflow-hidden">
+                  {project?.ownerId?.avatar ? (
+                    <img src={project.ownerId.avatar} alt="Owner" className="w-full h-full object-cover" />
+                  ) : (
+                    project?.ownerId?.name?.charAt(0)?.toUpperCase() || 'O'
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center space-x-2">
+                    <span>{project?.ownerId?.name || 'Project Owner'}</span>
+                    <span className="px-2 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[9px] font-bold">
+                      Admin / Creator
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-cyan-400">
+                    {project?.creator?.participation !== false 
+                      ? `Project Creator & ${project?.creator?.role || 'Project Lead'}`
+                      : 'Project Creator (Management Only)'
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Team Members List */}
+            {team?.members && team.members.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {team.members.map((m, idx) => {
+                  const memUser = m.userId || {};
+                  return (
+                    <div key={idx} className="glass-card p-4 rounded-2xl border border-gray-800 flex items-center justify-between text-xs">
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-950 border border-indigo-700/40 text-indigo-300 flex items-center justify-center font-bold text-sm overflow-hidden flex-shrink-0">
+                          {memUser.avatar ? (
+                            <img src={memUser.avatar} alt="Member" className="w-full h-full object-cover" />
+                          ) : (
+                            memUser.name?.charAt(0)?.toUpperCase() || 'M'
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-white truncate flex items-center space-x-1.5">
+                            <span>{memUser.name || 'Team Member'}</span>
+                            {m.isOwner && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                                Creator
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-cyan-400 truncate">{m.role || 'Developer'}</div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => navigate('/chat', { state: { recipient: memUser } })}
+                        className="p-2 rounded-xl bg-gray-900 border border-gray-800 text-cyan-400 hover:text-white"
+                        title="Send Direct Message"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-6 rounded-2xl bg-gray-900/50 border border-gray-800 text-center space-y-1">
+                <div className="text-xs text-gray-300 font-medium">No team members currently in working team roster.</div>
+                <div className="text-[11px] text-gray-500">Applications can be reviewed on the project details page.</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CREATE TASK MODAL */}
+        {taskModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+            <div className="glass-panel w-full max-w-md rounded-2xl border border-gray-800 p-6 space-y-4 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 className="text-base font-bold text-white">Create Kanban Task</h3>
+                <button onClick={() => setTaskModalOpen(false)} className="p-1 text-gray-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateTask} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">Task Title *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Build Auth Middleware"
+                    value={taskTitle}
+                    onChange={(e) => setTaskTitle(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">Description</label>
+                  <textarea
+                    rows="3"
+                    placeholder="Task details and acceptance criteria..."
+                    value={taskDesc}
+                    onChange={(e) => setTaskDesc(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">Priority</label>
+                    <select
+                      value={taskPriority}
+                      onChange={(e) => setTaskPriority(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">Assign To</label>
+                    <select
+                      value={taskAssignedTo}
+                      onChange={(e) => setTaskAssignedTo(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white"
+                    >
+                      <option value="">Unassigned</option>
+                      {team?.members?.map((m) => (
+                        <option key={m.userId?._id || m._id} value={m.userId?._id || m.userId}>
+                          {m.userId?.name || 'Member'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2 border-t border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => setTaskModalOpen(false)}
+                    className="px-4 py-2 bg-gray-800 text-xs font-semibold text-gray-300 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="gradient-btn px-5 py-2 text-xs font-bold text-white rounded-xl shadow-md"
+                  >
+                    Create Task
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ADD RESOURCE MODAL */}
+        {resModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+            <div className="glass-panel w-full max-w-md rounded-2xl border border-gray-800 p-6 space-y-4 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h3 className="text-base font-bold text-white">Add Shared Resource</h3>
+                <button onClick={() => setResModalOpen(false)} className="p-1 text-gray-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddResource} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">Resource Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Figma UI Designs"
+                    value={resName}
+                    onChange={(e) => setResName(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">URL / Link *</label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://..."
+                    value={resUrl}
+                    onChange={(e) => setResUrl(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">Resource Type</label>
+                  <select
+                    value={resType}
+                    onChange={(e) => setResType(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white"
+                  >
+                    <option value="GitHub">GitHub</option>
+                    <option value="Figma">Figma</option>
+                    <option value="Notion">Notion / Docs</option>
+                    <option value="API">API Endpoint</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2 border-t border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => setResModalOpen(false)}
+                    className="px-4 py-2 bg-gray-800 text-xs font-semibold text-gray-300 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="gradient-btn px-5 py-2 text-xs font-bold text-white rounded-xl shadow-md"
+                  >
+                    Save Resource
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

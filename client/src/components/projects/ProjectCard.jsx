@@ -50,7 +50,11 @@ const ProjectCard = ({ project }) => {
           </div>
           <div className="flex items-center space-x-1.5">
             <Users className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Team of {project.teamSize || 4}</span>
+            <span>
+              {project.currentMemberCount !== undefined
+                ? `${project.currentMemberCount}/${project.teamSize || 4} Members`
+                : `Team of ${project.teamSize || 4}`}
+            </span>
           </div>
           <div className="flex items-center space-x-1.5">
             <Clock className="w-3.5 h-3.5 text-purple-400" />

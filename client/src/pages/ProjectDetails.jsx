@@ -253,9 +253,27 @@ const ProjectDetails = () => {
     return currentUserId && memId && currentUserId === memId;
   });
 
-  const currentMemberCount = team?.members?.length || 1;
+  const currentMemberCount = team?.members ? team.members.length : 0;
   const maxTeamSize = project.teamSize || 4;
-  const progressPct = project.progress !== undefined ? project.progress : 65;
+  const openPositions = Math.max(0, maxTeamSize - currentMemberCount);
+  const fillPct = maxTeamSize > 0 ? Math.round((currentMemberCount / maxTeamSize) * 100) : 0;
+  const creatorParticipates = project.creator?.participation !== false;
+  const creatorRoleTitle = project.creator?.role || 'Project Lead';
+
+  const getRoleFillStatus = (roleTitle, roleCount = 1) => {
+    if (!team?.members || team.members.length === 0) {
+      return { filled: 0, required: roleCount, isFilled: false, open: roleCount, members: [] };
+    }
+    const clean = (roleTitle || '').toLowerCase().trim();
+    const matching = team.members.filter(m => {
+      const memRole = (m.role || '').toLowerCase().trim();
+      return memRole && (memRole.includes(clean) || clean.includes(memRole));
+    });
+    const filled = matching.length;
+    const isFilled = filled >= roleCount;
+    const open = Math.max(0, roleCount - filled);
+    return { filled, required: roleCount, isFilled, open, members: matching };
+  };
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
@@ -386,22 +404,45 @@ const ProjectDetails = () => {
               )}
             </div>
             <div>
-              <div className="text-xs font-bold text-white">{project.ownerId?.name || 'Project Lead'}</div>
-              <div className="text-[11px] text-cyan-400">Project Lead & Creator</div>
+              <div className="text-xs font-bold text-white flex items-center space-x-2">
+                <span>{project.ownerId?.name || 'Project Owner'}</span>
+                {creatorParticipates ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    {creatorRoleTitle}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700">
+                    Project Manager
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-cyan-400">
+                {creatorParticipates 
+                  ? `Project Creator & Active ${creatorRoleTitle}`
+                  : 'Project Creator (Management Only)'
+                }
+              </div>
             </div>
           </div>
 
-          {/* Team Capacity & Progress Bar */}
+          {/* Team Capacity & Real Filling */}
           <div className="space-y-2 pt-2 border-t border-gray-800">
             <div className="flex justify-between items-center text-xs text-gray-300 font-semibold">
               <span className="flex items-center space-x-1.5">
                 <Users className="w-4 h-4 text-cyan-400" />
-                <span>Current Team: <span className="text-white font-bold">{currentMemberCount} / {maxTeamSize}</span> Members</span>
+                <span>
+                  <span className="text-white font-bold">{currentMemberCount} of {maxTeamSize}</span> positions filled
+                  {openPositions > 0 ? (
+                    <span className="text-[11px] text-gray-400 font-normal ml-1.5">({openPositions} open {openPositions > 1 ? 'slots' : 'slot'})</span>
+                  ) : (
+                    <span className="text-[11px] text-amber-300 font-bold ml-1.5">(Team Full)</span>
+                  )}
+                </span>
               </span>
-              <span className="text-cyan-400 font-mono">{progressPct}% Progress</span>
+              <span className="text-cyan-400 font-mono">{fillPct}%</span>
             </div>
             <div className="w-full h-2 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full" style={{ width: `${progressPct}%` }} />
+              <div className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full transition-all" style={{ width: `${fillPct}%` }} />
             </div>
           </div>
 
@@ -510,30 +551,103 @@ const ProjectDetails = () => {
         {/* TEAM MEMBERS DISPLAY */}
         <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-gray-800 space-y-4 shadow-xl">
           <div className="flex justify-between items-center">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Project Team Members</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              Project Team Members ({currentMemberCount} / {maxTeamSize})
+            </h3>
             <Link to={`/workspace/${project._id}`} className="text-xs text-cyan-400 font-semibold hover:underline">
               View Team Workspace →
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {team?.members?.map((m) => (
-              <div key={m.userId?._id || m._id} className="p-3 rounded-xl bg-gray-900/80 border border-gray-800 flex items-center space-x-3 text-xs">
-                <div className="w-9 h-9 rounded-full bg-cyan-700/40 text-cyan-300 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
-                  {m.userId?.avatar ? (
-                    <img src={m.userId.avatar} alt="Member" className="w-full h-full object-cover" />
-                  ) : (
-                    m.userId?.name?.charAt(0)?.toUpperCase() || 'M'
-                  )}
+          {team?.members && team.members.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {team.members.map((m) => (
+                <div key={m.userId?._id || m._id} className="p-3 rounded-xl bg-gray-900/80 border border-gray-800 flex items-center space-x-3 text-xs">
+                  <div className="w-9 h-9 rounded-full bg-cyan-700/40 text-cyan-300 flex items-center justify-center font-bold overflow-hidden flex-shrink-0">
+                    {m.userId?.avatar ? (
+                      <img src={m.userId.avatar} alt="Member" className="w-full h-full object-cover" />
+                    ) : (
+                      m.userId?.name?.charAt(0)?.toUpperCase() || 'M'
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-white truncate flex items-center space-x-1.5">
+                      <span>{m.userId?.name || 'Team Member'}</span>
+                      {m.isOwner && (
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                          Creator
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-cyan-400 truncate">{m.role}</div>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="font-bold text-white truncate">{m.userId?.name || 'Team Developer'}</div>
-                  <div className="text-[11px] text-cyan-400 truncate">{m.role} {m.isOwner && '(Lead)'}</div>
-                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-gray-900/50 border border-gray-800/80 text-center space-y-1">
+              <div className="text-xs text-gray-300 font-medium">No team members have joined yet.</div>
+              <div className="text-[11px] text-gray-500">
+                {creatorParticipates 
+                  ? `Positions are open for the remaining team slots.`
+                  : `Project is managed by ${project.ownerId?.name || 'the creator'}. All ${maxTeamSize} team member roles are open for application.`
+                }
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
+
+        {/* REQUIRED ROLES STATUS (FILLED / OPEN) */}
+        {project.requiredRoles && project.requiredRoles.length > 0 && (
+          <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-gray-800 space-y-3 shadow-xl">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center space-x-2">
+                <Users className="w-4 h-4 text-cyan-400" />
+                <span>Team Roles & Recruitment Status</span>
+              </h3>
+              <span className="text-[11px] text-gray-400">
+                {project.requiredRoles.filter(r => getRoleFillStatus(r.title, r.count).isFilled).length} of {project.requiredRoles.length} roles filled
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              {project.requiredRoles.map((role, idx) => {
+                const status = getRoleFillStatus(role.title, role.count);
+                return (
+                  <div key={idx} className="p-3.5 rounded-xl bg-gray-900/70 border border-gray-800 flex justify-between items-center text-xs">
+                    <div className="min-w-0">
+                      <div className="font-bold text-white flex items-center space-x-1.5">
+                        <span className="truncate">{role.title}</span>
+                      </div>
+                      {role.skills && role.skills.length > 0 && (
+                        <div className="text-[10px] text-gray-400 mt-0.5 truncate">
+                          Skills: {role.skills.join(', ')}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-shrink-0 ml-2">
+                      {status.isFilled ? (
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800 flex items-center space-x-1">
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>Filled ({status.filled}/{status.required})</span>
+                        </span>
+                      ) : status.filled > 0 ? (
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-800">
+                          {status.filled}/{status.required} Filled ({status.open} Open)
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-950/60 text-amber-300 border border-amber-800">
+                          {status.required} Open
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Apply Modal */}
         {applyModalOpen && (

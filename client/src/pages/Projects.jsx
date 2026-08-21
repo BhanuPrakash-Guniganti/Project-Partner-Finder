@@ -227,8 +227,9 @@ const Projects = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
             {displayedProjects.map((project) => {
               const teamSize = project.teamSize || 4;
-              const currentMembers = project.currentMembersCount || (project.ownerId === user?._id ? 1 : 2);
-              const progressPct = project.progress !== undefined ? project.progress : 65;
+              const currentMembers = project.currentMemberCount !== undefined ? project.currentMemberCount : 0;
+              const openPositions = Math.max(0, teamSize - currentMembers);
+              const fillPct = teamSize > 0 ? Math.round((currentMembers / teamSize) * 100) : 0;
 
               return (
                 <div key={project._id} className="glass-card rounded-3xl p-5 border border-gray-800 flex flex-col justify-between space-y-4 shadow-xl min-w-0">
@@ -241,11 +242,11 @@ const Projects = () => {
                       </span>
 
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        project.status === 'Team Full' || project.status === 'Team Complete'
+                        openPositions === 0 || project.status === 'Team Full' || project.status === 'Team Complete'
                           ? 'bg-amber-950/60 text-amber-300 border-amber-800'
                           : 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
                       }`}>
-                        {project.status || 'Recruiting'}
+                        {openPositions === 0 ? 'Team Full' : `${openPositions} open`}
                       </span>
                     </div>
 
@@ -255,21 +256,21 @@ const Projects = () => {
                       <p className="text-xs text-gray-400 line-clamp-2 mt-1 leading-relaxed">{project.description}</p>
                     </div>
 
-                    {/* Team Members Count & Progress */}
+                    {/* Team Members Count & Real Fill Status */}
                     <div className="space-y-1.5 pt-1">
                       <div className="flex justify-between items-center text-[11px] text-gray-400">
                         <span className="flex items-center space-x-1">
                           <Users className="w-3.5 h-3.5 text-cyan-400" />
-                          <span><span className="text-white font-bold">{currentMembers} / {teamSize}</span> Members</span>
+                          <span><span className="text-white font-bold">{currentMembers} of {teamSize}</span> positions filled</span>
                         </span>
-                        <span className="text-cyan-400 font-mono text-[10px]">{progressPct}% Progress</span>
+                        <span className="text-cyan-400 font-mono text-[10px]">{fillPct}%</span>
                       </div>
 
-                      {/* Progress Bar */}
+                      {/* Real Capacity Fill Bar */}
                       <div className="w-full h-1.5 bg-gray-900 border border-gray-800 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full"
-                          style={{ width: `${progressPct}%` }}
+                          className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full transition-all"
+                          style={{ width: `${fillPct}%` }}
                         />
                       </div>
                     </div>

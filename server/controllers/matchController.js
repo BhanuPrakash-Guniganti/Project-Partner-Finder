@@ -2,6 +2,8 @@ const User = require('../models/User');
 const Project = require('../models/Project');
 const { calculateMatchScore } = require('../services/matchingService');
 
+const Team = require('../models/Team');
+
 const getRecommendedProjects = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
@@ -11,11 +13,19 @@ const getRecommendedProjects = async (req, res, next) => {
     const projects = await Project.find({ ownerId: { $ne: req.user.id }, status: 'Open', visibility: 'Public' })
       .populate('ownerId', 'name avatar email bio');
 
+    const projectIds = projects.map(p => p._id);
+    const teams = await Team.find({ projectId: { $in: projectIds } }).select('projectId members');
+    const teamMap = new Map();
+    teams.forEach(t => {
+      teamMap.set(t.projectId.toString(), t.members ? t.members.length : 0);
+    });
+
     const recommended = projects.map(p => {
       const pObj = p.toObject();
       const match = calculateMatchScore(userObj, pObj);
       return {
         ...pObj,
+        currentMemberCount: teamMap.get(p._id.toString()) || 0,
         matchScore: match.matchScore,
         matchBreakdown: match.matchBreakdown,
         reasons: match.reasons

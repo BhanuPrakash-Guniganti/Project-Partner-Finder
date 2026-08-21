@@ -36,7 +36,22 @@ const projectSchema = new mongoose.Schema({
   teamSize: { type: Number, default: 4 },
   duration: { type: String, default: '1-3 months' },
   availability: { type: String, default: '10-15 hrs/week' },
+  startDate: { type: Date, default: Date.now },
   deadline: { type: Date },
+  phase: { 
+    type: String, 
+    enum: ['Ideation', 'Planning', 'MVP Development', 'Testing', 'Completed', 'Archived'], 
+    default: 'Planning' 
+  },
+  projectGoals: { type: String, default: '' },
+  goals: [{ type: String }],
+  difficulty: { 
+    type: String, 
+    enum: ['Beginner', 'Intermediate', 'Advanced'], 
+    default: 'Intermediate' 
+  },
+  githubUrl: { type: String, default: '' },
+  referenceUrl: { type: String, default: '' },
   visibility: { type: String, enum: ['Public', 'Private'], default: 'Public' },
   status: { 
     type: String, 

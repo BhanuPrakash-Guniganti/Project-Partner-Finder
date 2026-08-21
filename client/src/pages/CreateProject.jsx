@@ -37,10 +37,13 @@ const CreateProject = () => {
   const [creatorSkills, setCreatorSkills] = useState(['React', 'Node.js']);
   const [newCreatorSkill, setNewCreatorSkill] = useState('');
 
-  // Team Specs
+  // Team Specs & Timeline
   const [minMembers, setMinMembers] = useState(2);
   const [maxMembers, setMaxMembers] = useState(5);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [deadline, setDeadline] = useState('');
   const [duration, setDuration] = useState('1-3 months');
+  const [phase, setPhase] = useState('Planning'); // 'Ideation' | 'Planning' | 'MVP Development' | 'Testing' | 'Completed'
   const [availability, setAvailability] = useState('10-15 hrs/week');
   const [difficulty, setDifficulty] = useState('Intermediate'); // 'Beginner' | 'Intermediate' | 'Advanced'
   const [visibility, setVisibility] = useState('Public'); // 'Public' | 'Private'
@@ -124,16 +127,20 @@ const CreateProject = () => {
     try {
       const res = await createProject({
         title,
-        description: projectGoals ? `${description}\n\nGoals: ${projectGoals}` : description,
+        description,
+        projectGoals: projectGoals.trim(),
         category: finalCategory,
         teamSize: maxMembers,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        deadline: deadline ? new Date(deadline) : undefined,
         duration,
+        phase,
         availability,
         visibility,
         requiredRoles,
         requiredSkills: skills,
-        githubUrl,
-        referenceUrl,
+        githubUrl: githubUrl.trim(),
+        referenceUrl: referenceUrl.trim(),
         difficulty,
         creator: {
           participation: creatorParticipation,
@@ -154,10 +161,10 @@ const CreateProject = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       <Navbar />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6 flex-1 min-w-0">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36 sm:pb-24 md:pb-12 pb-[calc(8rem+env(safe-area-inset-bottom))] w-full space-y-6 flex-1 min-w-0">
         
         {/* Header */}
         <div className="flex items-center space-x-3 border-b border-gray-800 pb-4 min-w-0">
@@ -537,7 +544,7 @@ const CreateProject = () => {
                   </div>
                 </div>
 
-                {/* Duration & Availability */}
+                {/* Duration & Phase */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-300">Project Duration</label>
@@ -554,20 +561,59 @@ const CreateProject = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-300">Weekly Availability Required</label>
+                    <label className="text-xs font-semibold text-gray-300">Initial Project Phase</label>
                     <select
-                      value={availability}
-                      onChange={(e) => setAvailability(e.target.value)}
+                      value={phase}
+                      onChange={(e) => setPhase(e.target.value)}
                       className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
                     >
-                      <option value="1-5 hrs/week">1-5 hrs/week</option>
-                      <option value="5-10 hrs/week">5-10 hrs/week</option>
-                      <option value="10-15 hrs/week">10-15 hrs/week</option>
-                      <option value="15-20 hrs/week">15-20 hrs/week</option>
-                      <option value="20+ hrs/week">20+ hrs/week</option>
-                      <option value="Weekends Only">Weekends Only</option>
+                      <option value="Ideation">Ideation</option>
+                      <option value="Planning">Planning</option>
+                      <option value="MVP Development">MVP Development</option>
+                      <option value="Testing">Testing</option>
+                      <option value="Completed">Completed</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Start Date & Target Completion / Deadline */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">Project Start Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-300">Target Deadline (Optional)</label>
+                    <input
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Availability */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-300">Weekly Availability Required</label>
+                  <select
+                    value={availability}
+                    onChange={(e) => setAvailability(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
+                  >
+                    <option value="1-5 hrs/week">1-5 hrs/week</option>
+                    <option value="5-10 hrs/week">5-10 hrs/week</option>
+                    <option value="10-15 hrs/week">10-15 hrs/week</option>
+                    <option value="15-20 hrs/week">15-20 hrs/week</option>
+                    <option value="20+ hrs/week">20+ hrs/week</option>
+                    <option value="Weekends Only">Weekends Only</option>
+                  </select>
                 </div>
 
                 {/* Difficulty */}

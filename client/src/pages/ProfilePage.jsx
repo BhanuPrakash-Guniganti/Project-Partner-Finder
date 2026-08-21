@@ -122,16 +122,22 @@ const ProfilePage = () => {
 
   const handleSave = async () => {
     setSaving(true);
+    const finalSkills = [...skills];
+    if (newSkillName.trim()) {
+      finalSkills.push({ name: newSkillName.trim(), proficiency: newSkillProf });
+      setNewSkillName('');
+    }
+
     const finalInterests = Array.from(new Set([
-      ...interests.filter(i => availableInterests.includes(i)),
+      ...interests,
       ...(isOtherSelected && customInterest.trim() ? [customInterest.trim()] : [])
-    ]));
+    ])).filter(Boolean);
 
     try {
       const res = await updateProfile({
         name,
         bio,
-        skills,
+        skills: finalSkills,
         availability,
         experienceLevel,
         interests: finalInterests,
@@ -155,10 +161,10 @@ const ProfilePage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 pb-36 md:pb-12 pb-[calc(9rem+env(safe-area-inset-bottom))] w-full min-w-0 flex-1 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 pb-36 sm:pb-24 md:pb-12 pb-[calc(9rem+env(safe-area-inset-bottom))] w-full min-w-0 flex-1 space-y-6">
         
         {/* Top Header */}
         <div className="flex justify-between items-center border-b border-gray-800 pb-4 min-w-0">

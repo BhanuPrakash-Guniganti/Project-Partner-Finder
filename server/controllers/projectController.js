@@ -7,7 +7,8 @@ const createProject = async (req, res, next) => {
     const {
       title, description, category, type, requiredRoles,
       requiredSkills, optionalSkills, teamSize, duration,
-      availability, deadline, visibility, status, creator
+      availability, startDate, deadline, phase, projectGoals,
+      difficulty, githubUrl, referenceUrl, visibility, status, creator
     } = req.body;
 
     if (!title || !description) {
@@ -35,7 +36,13 @@ const createProject = async (req, res, next) => {
       teamSize: teamSize || 4,
       duration: duration || '1-3 months',
       availability: availability || '10-15 hrs/week',
-      deadline,
+      startDate: startDate ? new Date(startDate) : new Date(),
+      deadline: deadline ? new Date(deadline) : undefined,
+      phase: phase || 'Planning',
+      projectGoals: projectGoals || '',
+      difficulty: difficulty || 'Intermediate',
+      githubUrl: githubUrl || '',
+      referenceUrl: referenceUrl || '',
       visibility: visibility || 'Public',
       status: status || 'Open'
     });

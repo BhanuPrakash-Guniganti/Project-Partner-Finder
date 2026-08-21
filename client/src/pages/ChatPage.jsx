@@ -299,10 +299,10 @@ const ChatPage = () => {
   const showActiveChatWindow = Boolean(chatType && (selectedUser || selectedProject));
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 w-full min-w-0 flex-1 flex flex-col justify-between">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 sm:pb-20 md:pb-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] w-full min-w-0 flex-1 flex flex-col justify-between">
         
         {/* Dedicated Mobile Chat Container */}
         <div className="glass-panel rounded-3xl border border-gray-800 flex flex-col h-[78vh] sm:h-[680px] shadow-2xl w-full max-w-full overflow-hidden">

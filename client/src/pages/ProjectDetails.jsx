@@ -276,10 +276,10 @@ const ProjectDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6 flex-1 min-w-0">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36 sm:pb-24 md:pb-12 pb-[calc(8rem+env(safe-area-inset-bottom))] w-full space-y-6 flex-1 min-w-0">
         
         {/* HEADER: Back Button, Truncated Title, More Options Menu */}
         <div className="flex items-center justify-between border-b border-gray-800 pb-4 min-w-0">
@@ -500,17 +500,21 @@ const ProjectDetails = () => {
             <span>Project Goals & Deliverables</span>
           </h3>
           <div className="space-y-2 pt-1 text-xs text-gray-300">
-            {[
-              'Design modular full-stack architecture & RESTful endpoints',
-              'Implement Grok AI match score calculation engine',
-              'Build real-time team collaboration chat with Socket.IO',
-              'Deploy high-availability application on Render cloud backend'
-            ].map((goal, idx) => (
-              <div key={idx} className="flex items-start space-x-2 bg-gray-900/60 p-2.5 rounded-xl border border-gray-800/80">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span>{goal}</span>
+            {project.projectGoals || project.goals?.length > 0 ? (
+              (project.goals?.length > 0 
+                ? project.goals 
+                : project.projectGoals.split('\n').map(g => g.trim()).filter(Boolean)
+              ).map((goal, idx) => (
+                <div key={idx} className="flex items-start space-x-2 bg-gray-900/60 p-2.5 rounded-xl border border-gray-800/80">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span>{goal}</span>
+                </div>
+              ))
+            ) : (
+              <div className="p-3 bg-gray-900/40 rounded-xl border border-gray-800/80 text-xs text-gray-500">
+                No specific milestones or deliverables specified for this project yet.
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -518,7 +522,7 @@ const ProjectDetails = () => {
         <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-gray-800 space-y-3 shadow-xl">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tech Stack & Required Skills</h3>
           <div className="flex flex-wrap gap-2 pt-1">
-            {(project.requiredSkills?.length > 0 ? project.requiredSkills : ['React', 'Node.js', 'MongoDB', 'Express', 'Python']).map(tech => (
+            {(project.requiredSkills?.length > 0 ? project.requiredSkills : ['React', 'Node.js', 'MongoDB', 'Express']).map(tech => (
               <span key={tech} className="px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-950/60 text-cyan-300 border border-cyan-800">
                 {tech}
               </span>
@@ -535,15 +539,21 @@ const ProjectDetails = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
             <div className="p-3 rounded-xl bg-gray-900/80 border border-gray-800">
               <span className="text-gray-400 text-[10px] uppercase font-bold block">Start Date</span>
-              <span className="text-white font-semibold">Aug 10, 2026</span>
+              <span className="text-white font-semibold">
+                {project.startDate 
+                  ? new Date(project.startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                  : (project.createdAt ? new Date(project.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not specified')}
+              </span>
             </div>
             <div className="p-3 rounded-xl bg-gray-900/80 border border-gray-800">
               <span className="text-gray-400 text-[10px] uppercase font-bold block">Expected Completion</span>
-              <span className="text-white font-semibold">{project.duration || '1-3 months'}</span>
+              <span className="text-white font-semibold">
+                {project.duration || (project.deadline ? new Date(project.deadline).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Not specified')}
+              </span>
             </div>
             <div className="p-3 rounded-xl bg-gray-900/80 border border-gray-800">
               <span className="text-gray-400 text-[10px] uppercase font-bold block">Current Phase</span>
-              <span className="text-cyan-300 font-semibold">MVP Development</span>
+              <span className="text-cyan-300 font-semibold">{project.phase || project.status || 'Planning'}</span>
             </div>
           </div>
         </div>

@@ -12,6 +12,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const supportRoutes = require('./routes/supportRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -57,6 +58,7 @@ app.use(['/api/chat', '/chat'], chatRoutes);
 app.use(['/api/notifications', '/notifications'], notificationRoutes);
 app.use(['/api/resume', '/resume'], resumeRoutes);
 app.use(['/api/admin', '/admin'], adminRoutes);
+app.use(['/api/support', '/support', '/api/contact', '/contact'], supportRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

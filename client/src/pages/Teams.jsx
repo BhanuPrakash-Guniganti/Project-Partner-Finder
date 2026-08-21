@@ -138,10 +138,10 @@ const Teams = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       <Navbar />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6 flex-1 min-w-0">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-36 sm:pb-24 md:pb-12 pb-[calc(8rem+env(safe-area-inset-bottom))] w-full space-y-6 flex-1 min-w-0">
         
         {/* Header & Active Team Selector */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-800 pb-4 min-w-0">

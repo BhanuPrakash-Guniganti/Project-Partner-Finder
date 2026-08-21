@@ -104,4 +104,8 @@ export const submitReport = (data) => API.post('/admin/reports', data);
 export const fetchAdminReports = () => API.get('/admin/reports');
 export const updateReportStatus = (id, data) => API.patch(`/admin/reports/${id}`, data);
 
+// Support & Contact APIs
+export const submitSupportTicket = (data) => API.post('/support', data);
+export const fetchSupportTickets = () => API.get('/support');
+
 export default API;

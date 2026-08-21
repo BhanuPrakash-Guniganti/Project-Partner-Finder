@@ -250,10 +250,10 @@ const TeamWorkspace = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       <Navbar />
 
-      <main className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 w-full space-y-4 flex-1 min-w-0">
+      <main className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-4 sm:py-6 pb-36 sm:pb-24 md:pb-12 pb-[calc(8rem+env(safe-area-inset-bottom))] w-full space-y-4 flex-1 min-w-0">
         
         {/* Workspace Banner */}
         <div className="glass-panel p-4 sm:p-6 rounded-2xl border border-gray-800 space-y-3 shadow-xl">

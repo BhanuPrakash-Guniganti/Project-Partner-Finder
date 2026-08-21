@@ -92,17 +92,35 @@ const Onboarding = () => {
     }
   };
 
+  const handleNextStep = () => {
+    if (step === 2 && newSkillName.trim()) {
+      setSkills(prev => [...prev, { name: newSkillName.trim(), proficiency: newSkillProf }]);
+      setNewSkillName('');
+    }
+    if (step === 4 && isOtherSelected && customInterest.trim()) {
+      if (!interests.includes(customInterest.trim())) {
+        setInterests(prev => [...prev, customInterest.trim()]);
+      }
+    }
+    setStep(prev => prev + 1);
+  };
+
   const handleFinish = async () => {
     setLoading(true);
+    const finalSkills = [...skills];
+    if (newSkillName.trim()) {
+      finalSkills.push({ name: newSkillName.trim(), proficiency: newSkillProf });
+    }
+
     const finalInterests = Array.from(new Set([
-      ...interests.filter(i => PREDEFINED_DOMAINS.includes(i)),
+      ...interests,
       ...(isOtherSelected && customInterest.trim() ? [customInterest.trim()] : [])
-    ]));
+    ])).filter(Boolean);
 
     try {
       const res = await updateOnboarding({
         bio,
-        skills,
+        skills: finalSkills,
         experienceLevel,
         interests: finalInterests,
         availability,
@@ -124,10 +142,10 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 flex flex-col justify-between w-full max-w-full overflow-x-hidden">
       <Navbar />
 
-      <main className="flex-1 flex items-center justify-center p-4 py-6 w-full min-w-0">
+      <main className="flex-1 flex items-center justify-center p-4 py-6 pb-36 sm:pb-24 md:pb-12 pb-[calc(8rem+env(safe-area-inset-bottom))] w-full min-w-0">
         <div className="w-full max-w-xl glass-panel p-6 sm:p-8 rounded-2xl border border-gray-800 shadow-2xl space-y-6">
           
           {/* Progress Indicator */}
@@ -443,7 +461,7 @@ const Onboarding = () => {
             {step < 6 ? (
               <button
                 type="button"
-                onClick={() => setStep(step + 1)}
+                onClick={handleNextStep}
                 className="gradient-btn px-5 py-2 rounded-xl text-xs font-bold text-white flex items-center space-x-1 shadow-lg"
               >
                 <span>Next Step</span>

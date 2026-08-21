@@ -41,13 +41,19 @@ async function runEdgeCaseTests() {
     });
 
     // -------------------------------------------------------------
-    // EDGE CASE 1: Creator Works on Project (Yes)
+    // EDGE CASE 1: Creator Works on Project (Yes) with Timeline Data
     // -------------------------------------------------------------
-    console.log('\n[EDGE CASE 1] Creator Works on Project (Yes) with role "Frontend Developer"');
+    console.log('\n[EDGE CASE 1] Creator Works on Project (Yes) with role "Frontend Developer" & Timeline');
     const project1 = await Project.create({
       ownerId: creatorUser._id,
       title: 'DevCollab Platform',
       description: 'Full stack student collaboration workspace.',
+      projectGoals: 'Build high-performance collaboration tools\nDeploy cloud microservices',
+      startDate: new Date('2026-09-01'),
+      duration: '3-6 months',
+      phase: 'MVP Development',
+      githubUrl: 'https://github.com/alice/devcollab',
+      referenceUrl: 'https://figma.com/file/devcollab',
       teamSize: 3,
       requiredRoles: [
         { title: 'Frontend Developer', count: 1, skills: ['React', 'TypeScript'] },
